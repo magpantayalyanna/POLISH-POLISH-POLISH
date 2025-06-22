@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Way2GO | Resort Details</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Open+Sans&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --main-color: #2c3e50;
+      --accent-color: #bfa980;
+      --bg-color: #f9f6f1;
+      --text-color: #444;
+      --font-header: 'Playfair Display', serif;
+      --font-body: 'Open Sans', sans-serif;
+    }
+    body { font-family: var(--font-body); background-color: var(--bg-color); color: var(--text-color); line-height: 1.8;}
+    header { background-color: white; padding: 30px 60px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e6e6e6;}
+    header h1 { font-family: var(--font-header); font-size: 28px; color: var(--main-color);}
+    .resort-section { max-width: 1200px; margin: 40px auto; background-color: white; border-radius: 10px; box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); padding: 30px; display: flex; gap: 30px;}
+    .resort-image { flex: 1;}
+    .resort-content { flex: 1.5;}
+    .resort-section img { width: 100%; height: 100%; max-height: 400px; object-fit: cover; border-radius: 10px;}
+    .resort-section h2 { font-family: var(--font-header); color: var(--main-color); font-size: 28px; margin-bottom: 10px;}
+    .resort-section ul { padding-left: 20px; list-style: disc;}
+    .book-button { background-color: var(--main-color); color: white; padding: 12px 24px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s ease;}
+    .book-button:disabled { background: #b0b0b0; cursor: not-allowed; opacity: 0.7;}
+    .book-button:hover:not([disabled]) { background-color: #1a252f;}
+    .confirm-booking-btn { background-color: #16a34a; color: white; padding: 12px 28px; border-radius: 6px; font-size: 18px; font-weight: bold; margin-top: 24px; border: none; cursor: pointer; transition: background 0.2s; box-shadow: 0 2px 8px 0 rgba(22,163,74,0.09);}
+    .confirm-booking-btn:disabled { background: #b0b0b0; cursor: not-allowed; opacity: 0.7;}
+    .confirm-booking-btn:hover:not([disabled]) { background: #166534;}
+    .stepper-btn { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #ddd; background: white; font-weight: bold; cursor: pointer;}
+    .slot-info { font-size: 14px; color: #4b5563; margin-top: 4px;}
+    .slot-popup { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #2c3e50; color: white; padding: 16px 32px; border-radius: 8px; font-size: 18px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: none; z-index: 9999; animation: fadeInUp 0.3s; min-width: 220px; text-align: center;}
+    @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%,30px);} to { opacity: 1; transform: translate(-50%,0);} }
+    .hidden { display: none; }
+    .flex { display: flex; }
+    .calendar-container { position: absolute; top: 100%; left: 0; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; min-width: 300px; display: none; }
+    .calendar-container.show { display: block; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .calendar-day-header { text-align: center; font-weight: bold; font-size: 12px; padding: 4px; }
+    .calendar-day { position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: all 0.2s; text-align: center; padding: 0; font-size: 14px; }
+    .calendar-day:hover:not(.disabled):not(.fully-booked) { background: #f0f0f0;}
+    .calendar-day.disabled { color: #ccc; cursor: not-allowed;}
+    .calendar-day.selected { background: #2c3e50; color: white;}
+    .calendar-day.fully-booked { color: #b91c1c!important; background: #fee2e2!important; cursor: not-allowed; position: relative;}
+    .calendar-day.fully-booked::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 0 2px white;}
+    .calendar-nav { cursor: pointer; padding: 4px 8px; border-radius: 4px;}
+    .calendar-nav:hover { background: #f0f0f0;}
+    .calendar-title { font-weight: bold;}
+    .calendar-close { position: absolute; top: 8px; right: 8px; cursor: pointer;}
+    .calendar-availability { font-size: 12px; margin-top: 8px; text-align: center;}
+    .calendar-footer { display: flex; justify-content: space-between; margin-top: 8px;}
+    .calendar-footer button { color: #3b82f6; font-size: 12px; background: none; border: none; cursor: pointer;}
+    .calendar-footer button:hover { text-decoration: underline;}
+    .capacity-error { color: #ef4444; font-size: 12px; margin-top: 4px; display: none;}
+    section.section h2 { font-size: 1.5rem; font-family: var(--font-header); color: var(--main-color); border-bottom: 1px solid #eee; margin-bottom: 10px; padding-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Way2GO</h1>
+  </header>
+  
+    {% set resort_names = {
+      "bluewave-pool-resort": "BlueWave Pool Resort",
+      "aquavibe-resort": "AquaVibe Resort",
+      "crystalsplash-poolside-haven": "CrystalSplash Poolside Haven",
+      "lagoon-cove-resort": "Lagoon Cove Resort",
+      "sunset-waters-pool-resort": "Sunset Waters Pool Resort",
+      "coolsprings-private-resort": "CoolSprings Private Resort"
+    } %}
+  
+    {% if resort == "bluewave-pool-resort" %}
+      <section class="resort-section">
+        <div class="resort-image">
+          <img src="static/images/Resort 10.jpg" alt="Blue Wave Pool Resort">
+        </div>
+        <div class="resort-content">
+          <h2>{{ resort_names[resort] }}</h2>
+          <p>Enjoy a relaxing stay at BlueWave, featuring spacious pools and family-friendly amenities.</p>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
+          <ul>
+            <li>Wave pool</li>
+            <li>Cottages</li>
+            <li>Grill area</li>
+            <li>Kiddie pool</li>
+          </ul>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
+          <p>Lipa, Batangas</p>
+          <a href="https://www.google.com/maps?q=Lipa,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
+        </div>
+      </section>
+      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div onclick="openRoomModal('Garden Room','₱4,000/night','2–3 persons','Cozy room with garden views, queen-size bed, and breakfast.','static/images/Garden Type 1.jpg','Garden Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Garden Room</h3>
+            <p class="text-gray-700 font-medium mb-1">₱4,000/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–3 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Queen-size bed</li>
+              <li>Garden view</li>
+              <li>Complimentary breakfast</li>
+            </ul>
+          </div>
+          <div onclick="openRoomModal('Beachfront Suite','₱7,000/night','2–6 persons','Suites directly facing the sea, king-size bed, balcony.','static/images/Beach Front 1.jpg','Beachfront Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Beachfront Suite</h3>
+            <p class="text-gray-700 font-medium mb-1">₱7,000/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–5 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>King-size bed</li>
+              <li>Balcony with sea view</li>
+              <li>Direct beach access</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    {% elif resort == "aquavibe-resort" %}
+      <section class="resort-section">
+        <div class="resort-image">
+          <img src="static/images/Resort 1.jpg" alt="AquaVibe Resort">
+        </div>
+        <div class="resort-content">
+          <h2>{{ resort_names[resort] }}</h2>
+          <p>AquaVibe is the perfect getaway for groups and barkadas, with vibrant pools and party amenities.</p>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
+          <ul>
+            <li>Infinity pool</li>
+            <li>Function hall</li>
+            <li>Music lounge</li>
+            <li>Picnic area</li>
+          </ul>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
+          <p>San Juan, Batangas</p>
+          <a href="https://bit.ly/3HQMwoQ" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
+        </div>
+      </section>
+      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div onclick="openRoomModal('Mountain View Room','₱5,500/night','2–3 persons','Rooms overlooking lush mountains, twin beds.','static/images/Garden Type 2.jpg','Mountain View Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Mountain View Room</h3>
+            <p class="text-gray-700 font-medium mb-1">₱5,500/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–3 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Twin beds</li>
+              <li>Mountain view</li>
+            </ul>
+          </div>
+          <div onclick="openRoomModal('Lagoon Suite','₱8,200/night','2–6 persons','Spacious suite with lagoon access, living room.','static/images/Beach Front 2.jpg','Lagoon Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Lagoon Suite</h3>
+            <p class="text-gray-700 font-medium mb-1">₱8,200/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Lagoon access</li>
+              <li>Living room</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    {% elif resort == "crystalsplash-poolside-haven" %}
+      <section class="resort-section">
+        <div class="resort-image">
+          <img src="static/images/Resort 2.jpg" alt="CrystalSplash Poolside Haven">
+        </div>
+        <div class="resort-content">
+          <h2>{{ resort_names[resort] }}</h2>
+          <p>CrystalSplash offers elegant poolside relaxation, perfect for weekend family escapes.</p>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
+          <ul>
+            <li>Lap pool</li>
+            <li>Gazebos</li>
+            <li>Jacuzzi</li>
+            <li>Private suites</li>
+          </ul>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
+          <p>Nasugbu, Batangas</p>
+          <a href="bit.ly/4eijVVG" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
+        </div>
+      </section>
+      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div onclick="openRoomModal('Deluxe Room','₱6,000/night','2-3 persons','Modern room with pool access and breakfast.','static/images/Garden Type 3.jpg','Deluxe Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Deluxe Room</h3>
+            <p class="text-gray-700 font-medium mb-1">₱6,000/night</p>
+            <p class="text-sm text-gray-500 mb-1">2-3 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Pool access</li>
+              <li>Complimentary breakfast</li>
+            </ul>
+          </div>
+          <div onclick="openRoomModal('Infinity Suite','₱10,000/night','2–6 persons','Suite with infinity pool views, luxurious amenities.','static/images/Beach Front 3.jpg','Infinity Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Infinity Suite</h3>
+            <p class="text-gray-700 font-medium mb-1">₱10,000/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Infinity pool view</li>
+              <li>Luxury amenities</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    {% elif resort == "lagoon-cove-resort" %}
+      <section class="resort-section">
+        <div class="resort-image">
+          <img src="static/images/Resort 4.jpg" alt="Lagoon Cove Resort">
+        </div>
+        <div class="resort-content">
+          <h2>{{ resort_names[resort] }}</h2>
+          <p>A nature-inspired pool resort with a relaxing lagoon, perfect for unwinding and reunions.</p>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
+          <ul>
+            <li>Lagoon pool</li>
+            <li>BBQ pit</li>
+            <li>Wide lawn</li>
+            <li>Clubhouse</li>
+          </ul>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
+          <p>Tanauan, Batangas</p>
+          <a href="https://www.google.com/maps?q=Tanauan,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
+        </div>
+      </section>
+      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div onclick="openRoomModal('Superior Room','₱5,200/night','2–3 persons','Spacious room with pool or garden view, twin beds.','static/images/Garden Type 4.jpg','Superior Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Superior Room</h3>
+            <p class="text-gray-700 font-medium mb-1">₱5,200/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–3 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Twin beds</li>
+              <li>Pool/garden view</li>
+            </ul>
+          </div>
+          <div onclick="openRoomModal('Family Suite','₱8,800/night','4–6 persons','Large suite for families, 2 bedrooms, living area.','static/images/Beach Front 4.jpg','Family Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Family Suite</h3>
+            <p class="text-gray-700 font-medium mb-1">₱8,800/night</p>
+            <p class="text-sm text-gray-500 mb-1">4–6 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>2 Bedrooms</li>
+              <li>Living area</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    {% elif resort == "sunset-waters-pool-resort" %}
+      <section class="resort-section">
+        <div class="resort-image">
+          <img src="static/images/resort 3.jpg" alt="Sunset Waters Pool Resort">
+        </div>
+        <div class="resort-content">
+          <h2>{{ resort_names[resort] }}</h2>
+          <p>Enjoy beautiful sunset views and a relaxing pool experience at Sunset Waters Pool Resort.</p>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
+          <ul>
+            <li>Sunset deck</li>
+            <li>Adult and kiddie pools</li>
+            <li>Open cabanas</li>
+            <li>Bar & grill</li>
+          </ul>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
+          <p>Balayan, Batangas</p>
+          <a href="https://www.google.com/maps?q=Balayan,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
+        </div>
+      </section>
+      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div onclick="openRoomModal('Standard Room','₱4,800/night','2-3 persons','Comfortable room with twin beds, basic amenities.','static/images/Garden Type 5.jpg','Standard Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Standard Room</h3>
+            <p class="text-gray-700 font-medium mb-1">₱4,800/night</p>
+            <p class="text-sm text-gray-500 mb-1">2-3 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Twin beds</li>
+              <li>Air conditioning</li>
+            </ul>
+          </div>
+          <div onclick="openRoomModal('Deluxe Suite','₱7,200/night','2–6 persons','Spacious suite, sea view, king-sized bed.','static/images/Beach Front 5.jpg','Deluxe Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Deluxe Suite</h3>
+            <p class="text-gray-700 font-medium mb-1">₱7,200/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Sea view</li>
+              <li>King-sized bed</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    {% elif resort == "coolsprings-private-resort" %}
+      <section class="resort-section">
+        <div class="resort-image">
+          <img src="static/images/Resort 6.jpg" alt="CoolSprings Private Resort">
+        </div>
+        <div class="resort-content">
+          <h2>{{ resort_names[resort] }}</h2>
+          <p>Experience exclusive privacy and cool spring water pools, ideal for private gatherings.</p>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
+          <ul>
+            <li>Private pool villas</li>
+            <li>Natural spring water</li>
+            <li>Conference room</li>
+            <li>Bonfire area</li>
+          </ul>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
+          <p>Sto. Tomas, Batangas</p>
+          <a href="https://www.google.com/maps?q=Sto.+Tomas,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
+          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
+        </div>
+      </section>
+      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
+        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div onclick="openRoomModal('Sulu Terrace','₱9,000/night','2-3 persons','Rustic Filipino-inspired villa, garden view, queen-size bed.','static/images/Garden Type 6.jpg','Sulu Terrace',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Sulu Terrace</h3>
+            <p class="text-gray-700 font-medium mb-1">₱9,000/night</p>
+            <p class="text-sm text-gray-500 mb-1">2-3 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Garden view</li>
+              <li>Queen-size bed</li>
+            </ul>
+          </div>
+          <div onclick="openRoomModal('Narra Pool Villa','₱18,000/night','2–6 persons','Private villa with pool, luxurious amenities, forest view.','static/images/Beach Front 6.png','Narra Pool Villa',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Narra Pool Villa</h3>
+            <p class="text-gray-700 font-medium mb-1">₱18,000/night</p>
+            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
+            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+              <li>Private pool</li>
+              <li>Forest view</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    {% else %}
+      <div class="max-w-xl mx-auto mt-20 text-center text-2xl font-bold text-red-700">
+        Resort not found.
+      </div>
+    {% endif %}
+
+      <!-- Room Details Modal -->
+  <div id="roomModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative">
+      <button onclick="closeRoomModal()" class="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-2xl font-bold">&times;</button>
+      <img id="roomImage" src="" alt="Room Image" class="w-full h-64 object-cover rounded-lg mb-4">
+      <h3 id="roomTitle" class="text-2xl font-bold text-[#2c3e50] mb-2"></h3>
+      <p id="roomPrice" class="text-lg text-green-700 font-semibold mb-1"></p>
+      <p id="roomCapacity" class="text-sm text-gray-700 mb-1"></p>
+      <p id="roomDesc" class="text-sm text-gray-600"></p>
+      <div id="slotInfo" class="slot-info">Select dates to check availability</div>
+      <button id="bookNowBtn" class="book-button mt-4" onclick="openModal()">Check Availability</button>
+    </div>
+  </div>
+
+  <!-- Booking Modal -->
+  <div id="bookingModal" onclick="closeModal(event)" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 justify-center items-center">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 relative" onclick="event.stopPropagation()">
+      <button onclick="closeModal(event)" class="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-2xl font-bold">&times;</button>
+      <h2 class="text-2xl font-bold mb-6 text-green-700">Complete Your Booking</h2>
+      <div id="bookingError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
+          <div class="relative">
+            <input type="text" id="checkinDate" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>
+            <div id="checkinCalendar" class="calendar-container">
+              <div class="calendar-header">
+                <span class="calendar-nav" onclick="changeMonth('checkin', -1)">❮</span>
+                <span class="calendar-title" id="checkinMonthYear">Month Year</span>
+                <span class="calendar-nav" onclick="changeMonth('checkin', 1)">❯</span>
+              </div>
+              <div class="calendar-grid" id="checkinDayHeaders"></div>
+              <div class="calendar-grid" id="checkinDays"></div>
+              <div class="calendar-footer">
+                <button onclick="clearSelection('checkin')">Clear</button>
+                <button onclick="selectToday('checkin')">Today</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
+          <div class="relative">
+            <input type="text" id="checkoutDate" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>
+            <div id="checkoutCalendar" class="calendar-container">
+              <div class="calendar-header">
+                <span class="calendar-nav" onclick="changeMonth('checkout', -1)">❮</span>
+                <span class="calendar-title" id="checkoutMonthYear">Month Year</span>
+                <span class="calendar-nav" onclick="changeMonth('checkout', 1)">❯</span>
+              </div>
+              <div class="calendar-grid" id="checkoutDayHeaders"></div>
+              <div class="calendar-grid" id="checkoutDays"></div>
+              <div class="calendar-footer">
+                <button onclick="clearSelection('checkout')">Clear</button>
+                <button onclick="selectToday('checkout')">Today</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="relative">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Guests</label>
+          <button id="guestButton" type="button" onclick="toggleDropdown()" class="w-full border rounded-md px-3 py-2 text-left text-sm shadow">
+            <span id="guestSummary">1 room, 1 adult, 0 children</span>
+          </button>
+          <div id="guestDropdown" class="absolute left-0 right-0 bg-white border rounded-lg shadow-lg mt-2 p-4 space-y-3 hidden z-50">
+            <div class="flex justify-between items-center">
+              <p class="font-medium text-sm">Room</p>
+              <div class="flex items-center gap-2">
+                <button onclick="adjust('room', -1)" class="stepper-btn">−</button>
+                <span id="room" class="w-6 text-center">1</span>
+                <button onclick="adjust('room', 1)" class="stepper-btn">+</button>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="font-medium text-sm">Adult</p>
+                <p class="text-xs text-gray-500">Ages 18 or above</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="adjust('adult', -1)" class="stepper-btn">−</button>
+                <span id="adult" class="w-6 text-center">1</span>
+                <button onclick="adjust('adult', 1)" class="stepper-btn">+</button>
+              </div>
+            </div>
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="font-medium text-sm">Children</p>
+                <p class="text-xs text-gray-500">Ages 0–17</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="adjust('child', -1)" class="stepper-btn">−</button>
+                <span id="child" class="w-6 text-center">0</span>
+                <button onclick="adjust('child', 1)" class="stepper-btn">+</button>
+              </div>
+            </div>
+            <div id="capacityError" class="capacity-error">Total guests exceed room capacity</div>
+          </div>
+        </div>
+      </div>
+      <div class="text-right mt-8">
+        <button class="confirm-booking-btn" onclick="confirmBooking()">Confirm Booking</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slot Popup Notification -->
+  <div id="slotPopup" class="slot-popup"></div>
+
+    <!-- Feedback Section as before -->
+    <section class="bg-white py-12 px-4">
+    <div class="mx-auto" style="max-width: 700px;">
+      <h2 class="text-3xl font-bold text-[#2c3e50] mb-6" style="font-family:'Playfair Display',serif;">Recent Feedback</h2>
+      {% if feedbacks and feedbacks|length > 0 %}
+        {% for fb in feedbacks %}
+          <div class="rounded-xl border border-gray-200 bg-[#fcfaf6] shadow p-8 mb-6 w-full text-center">
+            <div class="flex items-center justify-center mb-3 text-yellow-500 text-base" style="letter-spacing:2px;">
+            </div>
+            <p class="italic text-base mb-4 text-[#444]">"{{ fb.message }}"</p>
+            <div class="flex items-center justify-center mt-2">
+              <img src="https://randomuser.me/api/portraits/women/11.jpg" alt="User photo" class="w-12 h-12 rounded-full mr-3">
+              <div class="text-left">
+                <div class="font-semibold text-[#2c3e50]">Anonymous Person</div>
+                <div class="text-xs text-gray-500">{{ resort_names.get(fb.resort, fb.resort) }}</div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center text-gray-500">No feedback yet for this resort.</div>
+      {% endif %}
+    </div>
+  </section>
+  <script>
+const bookingData = {
+  currentRoomId: null,
+  currentRoomCapacity: null,
+  currentCalendarType: null,
+  currentMonth: new Date().getMonth(),
+  currentYear: new Date().getFullYear(),
+  bookings: {},
+  roomSlots: {
+    'Garden Room':5,'Beachfront Suite':5,'Mountain View Room':5,'Lagoon Suite':5,'Deluxe Room':5,
+    'Infinity Suite':5,'Superior Room':5,'Family Suite':5,'Standard Room':5,'Deluxe Suite':5,
+    'Sulu Terrace':5,'Narra Pool Villa':5
+  },
+  unavailableDates: {
+    'Garden Room':[],
+    'Beachfront Suite':[],
+    'Mountain View Room':[],
+    'Lagoon Suite':[],
+    'Deluxe Room':[],
+    'Infinity Suite':[],
+    'Superior Room':[],
+    'Family Suite':[],
+    'Standard Room':[],
+    'Deluxe Suite':[],
+    'Sulu Terrace':[],
+    'Narra Pool Villa':[]
+  },
+  calendarState: {
+    checkin: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: null },
+    checkout: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: null }
+  }
+};
+
+function getAvailableRooms(roomId, dateStr) {
+  if (bookingData.unavailableDates[roomId] && bookingData.unavailableDates[roomId].includes(dateStr)) return 0;
+  if (bookingData.bookings[roomId] && bookingData.bookings[roomId][dateStr]) {
+    return Math.max(0, bookingData.roomSlots[roomId] - bookingData.bookings[roomId][dateStr]);
+  }
+  return bookingData.roomSlots[roomId];
+}
+function isFullyBookedOn(roomId, dateStr) {
+  return getAvailableRooms(roomId, dateStr) <= 0;
+}
+document.addEventListener('DOMContentLoaded', function() {
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  dayNames.forEach(day => {
+    const dayElement = document.createElement('div');
+    dayElement.className = 'calendar-day-header';
+    dayElement.textContent = day;
+    document.getElementById('checkinDayHeaders').appendChild(dayElement);
+    document.getElementById('checkoutDayHeaders').appendChild(dayElement.cloneNode(true));
+  });
+
+  renderCalendar('checkin');
+  renderCalendar('checkout');
+
+  document.getElementById('checkinDate').addEventListener('click', () => toggleCalendar('checkin'));
+  document.getElementById('checkoutDate').addEventListener('click', () => toggleCalendar('checkout'));
+  updateSummary();
+});
+function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapacity=3) {
+  bookingData.currentRoomId = roomId;
+  bookingData.currentRoomCapacity = parseInt((roomCapacity || '3').toString().replace(/\D/g, '')) || 3;
+  document.getElementById('roomTitle').innerText = title;
+  document.getElementById('roomPrice').innerText = price;
+  document.getElementById('roomCapacity').innerText = capacity;
+  document.getElementById('roomDesc').innerText = desc;
+  document.getElementById('roomImage').src = imageUrl;
+  updateSlotInfo();
+  document.getElementById('roomModal').classList.remove('hidden');
+}
+function updateSlotInfo() {
+  const roomId = bookingData.currentRoomId;
+  const checkinDate = bookingData.calendarState.checkin.selectedDate;
+  const checkoutDate = bookingData.calendarState.checkout.selectedDate;
+  const slotInfo = document.getElementById('slotInfo');
+
+  if (!checkinDate || !checkoutDate) {
+    slotInfo.textContent = 'Select dates to check availability';
+    return;
+  }
+
+  let date = new Date(checkinDate);
+  const end = new Date(checkoutDate);
+  let allAvailable = true;
+  let minAvailable = bookingData.roomSlots[roomId];
+
+  while (date < end) {
+    const dateStr = date.toISOString().split('T')[0];
+    const available = getAvailableRooms(roomId, dateStr);
+    if (available <= 0) {
+      allAvailable = false;
+      minAvailable = 0;
+      break;
+    }
+    if (available < minAvailable) minAvailable = available;
+    date.setDate(date.getDate() + 1);
+  }
+
+  if (allAvailable) {
+    slotInfo.textContent = `${minAvailable} rooms available for your selected dates!`;
+    slotInfo.style.color = '#166534';
+    document.getElementById('bookNowBtn').textContent = 'Book Now';
+    document.getElementById('bookNowBtn').disabled = false;
+  } else {
+    slotInfo.textContent = 'Some dates in your selection are fully booked';
+    slotInfo.style.color = '#991b1b';
+    document.getElementById('bookNowBtn').textContent = 'Check Availability';
+    document.getElementById('bookNowBtn').disabled = false;
+  }
+}
+function closeRoomModal() {
+  document.getElementById('roomModal').classList.add('hidden');
+}
+function openModal() {
+  document.getElementById('bookingError').classList.add('hidden');
+  if (!bookingData.calendarState.checkin.selectedDate) selectToday('checkin');
+  if (!bookingData.calendarState.checkout.selectedDate) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    selectDate('checkout', tomorrow);
+  }
+  document.getElementById('bookingModal').classList.remove('hidden');
+  document.getElementById('bookingModal').classList.add('flex');
+}
+function closeModal(event) {
+  event.stopPropagation();
+  document.getElementById('bookingModal').classList.remove('flex');
+  document.getElementById('bookingModal').classList.add('hidden');
+}
+function toggleDropdown() {
+  document.getElementById('guestDropdown').classList.toggle('hidden');
+}
+function adjust(type, change) {
+  const el = document.getElementById(type);
+  let value = parseInt(el.innerText);
+  let roomCount = parseInt(document.getElementById('room').innerText);
+  let maxPerRoom = bookingData.currentRoomCapacity || 3; // default 3 kung undefined
+  let maxTotal = maxPerRoom * roomCount;
+  let adultCount = parseInt(document.getElementById('adult').innerText);
+  let childCount = parseInt(document.getElementById('child').innerText);
+  let totalGuests = adultCount + childCount;
+  const capacityError = document.getElementById('capacityError');
+
+  if (type === 'room') {
+    // Room logic: keep at least 1, max based on slot
+    const roomId = bookingData.currentRoomId;
+    const checkinDate = bookingData.calendarState.checkin.selectedDate;
+    const checkoutDate = bookingData.calendarState.checkout.selectedDate;
+    if (!checkinDate || !checkoutDate) {
+      showSlotPopup('Please select dates first');
+      return;
+    }
+    let maxRooms = bookingData.roomSlots[roomId];
+    let date = new Date(checkinDate);
+    const end = new Date(checkoutDate);
+    while (date < end) {
+      const dateStr = date.toISOString().split('T')[0];
+      const available = getAvailableRooms(roomId, dateStr);
+      if (available < maxRooms) maxRooms = available;
+      date.setDate(date.getDate() + 1);
+    }
+    value += change;
+    if (value < 1) value = 1;
+    if (value > maxRooms) {
+      value = maxRooms;
+      showSlotPopup(`Only ${maxRooms} room(s) available for selected dates`);
+    }
+    // Pag may pagbabago ng room, adjust adults/children kung sumobra sa bagong maxTotal
+    maxTotal = maxPerRoom * value;
+    if (adultCount + childCount > maxTotal) {
+      // Adjust downwards
+      let newAdult = Math.min(adultCount, maxTotal);
+      let newChild = Math.max(0, maxTotal - newAdult);
+      document.getElementById('adult').innerText = newAdult;
+      document.getElementById('child').innerText = newChild;
+      capacityError.style.display = 'none';
+    }
+    el.innerText = value;
+    updateSummary();
+    return;
+  }
+
+  // For adult/child:
+  let newAdult = adultCount;
+  let newChild = childCount;
+  if (type === 'adult') {
+    value += change;
+    if (value < 1) value = 1;
+    newAdult = value;
+  } else if (type === 'child') {
+    value += change;
+    if (value < 0) value = 0;
+    newChild = value;
+  }
+
+  let newTotal = newAdult + newChild;
+  if (newTotal > maxTotal) {
+    capacityError.style.display = 'block';
+    return;
+  } else {
+    capacityError.style.display = 'none';
+    document.getElementById('adult').innerText = newAdult;
+    document.getElementById('child').innerText = newChild;
+    updateSummary();
+  }
+}
+
+function updateSummary() {
+  const room = document.getElementById('room').innerText;
+  const adult = document.getElementById('adult').innerText;
+  const child = document.getElementById('child').innerText;
+  document.getElementById('guestSummary').innerText =
+    `${room} room${room > 1 ? 's' : ''}, ${adult} adult${adult > 1 ? 's' : ''}, ${child} child${child != 1 ? 'ren' : ''}`;
+}
+function confirmBooking() {
+  const roomId = bookingData.currentRoomId;
+  const checkinDate = bookingData.calendarState.checkin.selectedDate;
+  const checkoutDate = bookingData.calendarState.checkout.selectedDate;
+  const rooms = parseInt(document.getElementById('room').innerText);
+  const adults = parseInt(document.getElementById('adult').innerText);
+  const children = parseInt(document.getElementById('child').innerText);
+  const totalGuests = adults + children;
+  const errorElement = document.getElementById('bookingError');
+
+  if (!checkinDate || !checkoutDate) {
+    errorElement.textContent = 'Please select check-in and check-out dates';
+    errorElement.classList.remove('hidden');
+    return;
+  }
+  if (checkoutDate <= checkinDate) {
+    errorElement.textContent = 'Check-out date must be after check-in date';
+    errorElement.classList.remove('hidden');
+    return;
+  }
+  // Check if total guests exceed room capacity
+  if (totalGuests > (bookingData.currentRoomCapacity * rooms)) {
+    errorElement.textContent = `Total guests (${totalGuests}) exceed room capacity (max ${bookingData.currentRoomCapacity * rooms} for ${rooms} room(s))`;
+    errorElement.classList.remove('hidden');
+    return;
+  }
+  let date = new Date(checkinDate);
+  const end = new Date(checkoutDate);
+  while (date < end) {
+    const dateStr = date.toISOString().split('T')[0];
+    const available = getAvailableRooms(roomId, dateStr);
+    if (available < rooms) {
+      errorElement.textContent = `Not enough availability for ${dateStr}. Only ${available} room(s) available.`;
+      errorElement.classList.remove('hidden');
+      return;
+    }
+    date.setDate(date.getDate() + 1);
+  }
+  processBooking(roomId, checkinDate, checkoutDate, rooms);
+}
+function processBooking(roomId, checkinDate, checkoutDate, rooms) {
+  if (!bookingData.bookings[roomId]) bookingData.bookings[roomId] = {};
+  let date = new Date(checkinDate);
+  const end = new Date(checkoutDate);
+  while (date < end) {
+    const dateStr = date.toISOString().split('T')[0];
+    if (!bookingData.bookings[roomId][dateStr]) bookingData.bookings[roomId][dateStr] = 0;
+    bookingData.bookings[roomId][dateStr] += rooms;
+    date.setDate(date.getDate() + 1);
+  }
+
+  // ---- Get all info for params ----
+  const roomTitle = document.getElementById('roomTitle').innerText;
+  const roomPrice = document.getElementById('roomPrice').innerText;
+  const roomPriceNumber = parseInt(roomPrice.replace(/[^\d]/g, ''), 10);
+  const guestSummary = document.getElementById('guestSummary').innerText;
+  const resortName = document.querySelector('.resort-section h2').innerText;
+  const locationLabel = Array.from(document.querySelectorAll('.resort-section h3')).find(
+    el => el.innerText.trim().toLowerCase().startsWith('location')
+  );
+  const resortLocation = locationLabel ? locationLabel.nextElementSibling.innerText.trim() : '';
+
+  // ---- Redirect with params (only once) ----
+  const params = new URLSearchParams({
+    checkin: checkinDate,
+    checkout: checkoutDate,
+    summary: guestSummary,
+    room: roomTitle,
+    roomPrice: roomPrice, 
+    roomPriceNumber: roomPriceNumber,
+    resort: resortName,
+    location: resortLocation
+  });
+  window.location.href = `finalbookingform.html?${params.toString()}`;
+}
+function showSlotPopup(message) {
+  const popup = document.getElementById('slotPopup');
+  popup.textContent = message;
+  popup.style.display = 'block';
+  setTimeout(() => popup.style.display = 'none', 1800);
+}
+function toggleCalendar(type) {
+  const otherType = type === 'checkin' ? 'checkout' : 'checkin';
+  document.getElementById(`${otherType}Calendar`).classList.remove('show');
+  document.getElementById(`${type}Calendar`).classList.toggle('show');
+}
+function changeMonth(type, offset) {
+  bookingData.calendarState[type].currentMonth += offset;
+  if (bookingData.calendarState[type].currentMonth > 11) {
+    bookingData.calendarState[type].currentMonth = 0;
+    bookingData.calendarState[type].currentYear++;
+  } else if (bookingData.calendarState[type].currentMonth < 0) {
+    bookingData.calendarState[type].currentMonth = 11;
+    bookingData.calendarState[type].currentYear--;
+  }
+  renderCalendar(type);
+}
+function renderCalendar(type) {
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const state = bookingData.calendarState[type];
+  const firstDay = new Date(state.currentYear, state.currentMonth, 1);
+  const startingDay = firstDay.getDay();
+  const daysInMonth = new Date(state.currentYear, state.currentMonth + 1, 0).getDate();
+  document.getElementById(`${type}MonthYear`).textContent = `${monthNames[state.currentMonth]} ${state.currentYear}`;
+  const daysContainer = document.getElementById(`${type}Days`);
+  daysContainer.innerHTML = '';
+  for (let i = 0; i < startingDay; i++) daysContainer.appendChild(document.createElement('div'));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(state.currentYear, state.currentMonth, day);
+    const dateStr = date.toISOString().split('T')[0];
+    const dayElement = document.createElement('div');
+    dayElement.className = 'calendar-day';
+    dayElement.textContent = day;
+    if (date < today) {
+      dayElement.classList.add('disabled');
+    } else if (isFullyBookedOn(bookingData.currentRoomId, dateStr)) {
+      dayElement.classList.add('fully-booked');
+      dayElement.title = 'Fully booked';
+    } else {
+      dayElement.addEventListener('click', () => selectDate(type, date));
+    }
+    if (state.selectedDate && date.getDate() === state.selectedDate.getDate() &&
+        date.getMonth() === state.selectedDate.getMonth() && date.getFullYear() === state.selectedDate.getFullYear()) {
+      dayElement.classList.add('selected');
+    }
+    daysContainer.appendChild(dayElement);
+  }
+}
+function selectDate(type, date) {
+  bookingData.calendarState[type].selectedDate = date;
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  document.getElementById(`${type}Date`).value = `${month}/${day}/${date.getFullYear()}`;
+  document.getElementById(`${type}Calendar`).classList.remove('show');
+  if (type === 'checkin' && bookingData.calendarState.checkout.selectedDate && date > bookingData.calendarState.checkout.selectedDate) {
+    const nextDay = new Date(date);
+    nextDay.setDate(date.getDate() + 1);
+    selectDate('checkout', nextDay);
+  }
+  updateSlotInfo();
+}
+function selectToday(type) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  selectDate(type, today);
+  bookingData.calendarState[type].currentMonth = today.getMonth();
+  bookingData.calendarState[type].currentYear = today.getFullYear();
+  renderCalendar(type);
+}
+function clearSelection(type) {
+  bookingData.calendarState[type].selectedDate = null;
+  document.getElementById(`${type}Date`).value = '';
+  document.getElementById(`${type}Calendar`).classList.remove('show');
+  updateSlotInfo();
+}
+window.addEventListener('click', function(e) {
+  const button = document.getElementById('guestButton');
+  const dropdown = document.getElementById('guestDropdown');
+  if (!button.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden');
+  const checkinCalendar = document.getElementById('checkinCalendar');
+  const checkoutCalendar = document.getElementById('checkoutCalendar');
+  const checkinInput = document.getElementById('checkinDate');
+  const checkoutInput = document.getElementById('checkoutDate');
+  if (!checkinCalendar.contains(e.target) && !checkinInput.contains(e.target)) checkinCalendar.classList.remove('show');
+  if (!checkoutCalendar.contains(e.target) && !checkoutInput.contains(e.target)) checkoutCalendar.classList.remove('show');
+});
+</script>
+</body>
+</html>

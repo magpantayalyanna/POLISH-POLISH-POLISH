@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Booking Confirmation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9fafb;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h1 {
+      color: #2c3e50;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    h2 {
+      color: #34495e;
+      font-size: 18px;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 6px;
+    }
+    p {
+      font-size: 14px;
+      line-height: 1.6;
+      margin: 8px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 25px;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 14px;
+    }
+    th {
+      background-color: #f1f5f9;
+    }
+    .policy {
+      background-color: #fdf6f6;
+      border-left: 4px solid #e53e3e;
+      padding: 12px 15px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: #9b2c2c;
+    }
+    .footer {
+      font-size: 12px;
+      color: #888;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 15px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    .proof-section {
+      margin: 32px 0 0 0;
+      padding: 0;
+      text-align: center;
+    }
+    .proof-form {
+      margin: 0 auto;
+      max-width: 340px;
+      padding: 22px 22px 10px 22px;
+      background: #f7fafc;
+      border-radius: 10px;
+      border: 1.5px solid #e1e5ea;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .proof-label {
+      font-weight: 600;
+      color: #2c3e50;
+      margin-bottom: 6px;
+      font-size: 15px;
+    }
+    .proof-input {
+      font-size: 15px;
+      padding: 8px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 6px;
+      width: 100%;
+      text-align: left;
+      outline: none;
+      transition: border 0.2s;
+      margin-bottom: 10px;
+    }
+    .proof-input:focus {
+      border: 1.5px solid #2f4b7c;
+    }
+    .error-msg {
+      color: #e53e3e;
+      font-size: 13px;
+      margin-bottom: 8px;
+      text-align: left;
+      display: none;
+    }
+    .confirm-btn-section {
+      text-align: center;
+      margin: 36px 0 0 0;
+    }
+    .confirm-btn {
+      background: #2f4b7c;
+      color: #fff;
+      font-size: 16px;
+      padding: 12px 42px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      transition: background 0.2s;
+    }
+    .confirm-btn:disabled {
+      background: #a9b3c1;
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+    .confirm-btn:hover:enabled {
+      background: #a05195;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <h1>Booking Confirmation</h1>
+    <p>Dear <strong>{{ guest_first_name }} {{ guest_last_name }}</strong>,</p>
+    <p>Thank you for choosing to stay with us! Below are your booking details:</p>
+
+    <h2>Booking Details</h2>
+    <table>
+      <tr><th>Hotel / Resort</th><td>{{ resort_name }}</td></tr>
+      <tr><th>Check-in</th><td>{{ checkin_date }} at {{ checkin_time }}</td></tr>
+      <tr><th>Check-out</th><td>{{ checkout_date }} at {{ checkout_time }}</td></tr>
+      <tr><th>Number of nights</th><td>{{ nights }}</td></tr>
+      <tr><th>Room Type</th><td>{{ room_type }}</td></tr>
+      <tr><th>Guests</th><td>{{ guests }}</td></tr>
+      <tr><th>Special Requests</th><td>{% if special_requests %}{{ special_requests }}{% else %}<em>None</em>{% endif %}</td></tr>
+      <tr><th>Mode of Payment</th><td>{{ payment_method }}</td></tr>
+      <tr><th>Total Amount</th><td>₱ {{ '%.2f'|format(total_amount|float) }}</td></tr>
+      <tr><th>Down Payment</th><td>₱ {{ '%.2f'|format(downpayment|float) }}</td></tr>
+      <tr><th>Remaining Balance</th><td>₱ {{ '%.2f'|format(remaining_balance|float) }}</td></tr>
+      {% if card_holder and card_last4 and card_type and card_reference %}
+      <tr><th colspan="2" style="background:#e2e8f0;color:#34495e;">Card Payment Details (Proof)</th></tr>
+      <tr><th>Cardholder Name</th><td>{{ card_holder }}</td></tr>
+      <tr><th>Card Type</th><td>{{ card_type }}</td></tr>
+      <tr><th>Last 4 Digits</th><td>**** **** **** {{ card_last4 }}</td></tr>
+      <tr><th>Reference Number</th><td>{{ card_reference }}</td></tr>
+      {% endif %}
+    </table>
+
+    <!-- Proof Section -->
+    <div class="proof-section">
+      {% if qr_path %}
+        <!-- GCash Reference Proof -->
+        <h2>GCash Payment Proof</h2>
+        <p>Scan the QR code and enter your GCash Reference Number below to confirm your booking.</p>
+        <img src="{{ qr_path }}" alt="QR Code for {{ resort_name }}" style="width: 200px; height: 200px; margin: 18px auto 20px auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: block;" />
+        <form class="proof-form" id="gcashProofForm" method="post" action="{{ url_for('confirm_booking') }}">
+          <span class="proof-label">Reference Number (13 digits):</span>
+          <input type="text" id="reference_number" name="reference_number" maxlength="13" class="proof-input" pattern="\d{13}" required autocomplete="off" inputmode="numeric" />
+          <div id="refErrorMsg" class="error-msg">Reference number must be exactly 13 digits.</div>
+          <!-- Hidden fields for booking data -->
+          <input type="hidden" name="resort_name" value="{{ resort_name }}">
+          <input type="hidden" name="guest_first_name" value="{{ guest_first_name }}">
+          <input type="hidden" name="guest_last_name" value="{{ guest_last_name }}">
+          <input type="hidden" name="checkin_date" value="{{ checkin_date }}">
+          <input type="hidden" name="checkin_time" value="{{ checkin_time }}">
+          <input type="hidden" name="checkout_date" value="{{ checkout_date }}">
+          <input type="hidden" name="checkout_time" value="{{ checkout_time }}">
+          <input type="hidden" name="nights" value="{{ nights }}">
+          <input type="hidden" name="room_type" value="{{ room_type }}">
+          <input type="hidden" name="guests" value="{{ guests }}">
+          <input type="hidden" name="special_requests" value="{{ special_requests }}">
+          <input type="hidden" name="payment_method" value="{{ payment_method }}">
+          <input type="hidden" name="total_amount" value="{{ total_amount }}">
+          <input type="hidden" name="downpayment" value="{{ downpayment }}">
+          <input type="hidden" name="remaining_balance" value="{{ remaining_balance }}">
+          <input type="hidden" name="status" value="confirmed">
+          <input type="hidden" name="qr_path" value="{{ qr_path }}">
+          <div class="confirm-btn-section">
+            <button type="submit" class="confirm-btn" id="confirmBtn" disabled>Confirm Booking</button>
+          </div>
+        </form>
+      {% elif payment_method and ('Bank Transfer' in payment_method or 'Card' in payment_method) %}
+        <!-- Card/Bank Transfer Proof -->
+        <h2>Card/Bank Transfer Payment Proof</h2>
+        <p>Enter your payment proof details below to confirm your booking.</p>
+        <form class="proof-form" id="cardProofForm" method="post" action="{{ url_for('confirm_booking') }}">
+          <span class="proof-label">Cardholder Name:</span>
+          <input type="text" id="card_holder" name="card_holder" class="proof-input" maxlength="50" required>
+          <span class="proof-label">Card Type:</span>
+          <select id="card_type" name="card_type" class="proof-input" required>
+            <option value="" disabled selected>Select Card Type</option>
+            <option value="Credit Card (Visa)">Credit Card </option>
+            <option value="Debit Card (Visa)">Debit Card </option>
+          </select>
+          <span class="proof-label">Last 4 digits of card number:</span>
+          <input type="text" id="card_last4" name="card_last4" maxlength="4" pattern="\d{4}" class="proof-input" required>
+          <span class="proof-label">Reference Number / Transaction ID:</span>
+          <input type="text" id="card_reference" name="card_reference" maxlength="32" class="proof-input" required>
+      
+          <!-- Hidden fields for booking data -->
+          <input type="hidden" name="resort_name" value="{{ resort_name }}">
+          <input type="hidden" name="guest_first_name" value="{{ guest_first_name }}">
+          <input type="hidden" name="guest_last_name" value="{{ guest_last_name }}">
+          <input type="hidden" name="checkin_date" value="{{ checkin_date }}">
+          <input type="hidden" name="checkin_time" value="{{ checkin_time }}">
+          <input type="hidden" name="checkout_date" value="{{ checkout_date }}">
+          <input type="hidden" name="checkout_time" value="{{ checkout_time }}">
+          <input type="hidden" name="nights" value="{{ nights }}">
+          <input type="hidden" name="room_type" value="{{ room_type }}">
+          <input type="hidden" name="guests" value="{{ guests }}">
+          <input type="hidden" name="special_requests" value="{{ special_requests }}">
+          <input type="hidden" name="payment_method" value="{{ payment_method }}">
+          <input type="hidden" name="total_amount" value="{{ total_amount }}">
+          <input type="hidden" name="downpayment" value="{{ downpayment }}">
+          <input type="hidden" name="remaining_balance" value="{{ remaining_balance }}">
+          <input type="hidden" name="status" value="confirmed">
+          <input type="hidden" name="qr_path" value="{{ qr_path }}">
+          <div class="confirm-btn-section">
+            <button type="submit" class="confirm-btn" id="confirmCardBtn">Confirm Booking</button>
+          </div>
+        </form>
+      {% endif %}
+    </div>
+
+    <h2>Important Policies</h2>
+    <div class="policy">
+      <strong>Cancellation Policy:</strong> Cancellations made more than 7 days before arrival will receive a full refund. Cancellations within 7 days of arrival may incur a fee or no refund.
+    </div>
+    <div class="policy">
+      <strong>Refund Policy:</strong> Refunds will be processed within 5-7 business days after cancellation confirmation.
+    </div>
+    <div class="policy">
+      <strong>Check-in / Check-out:</strong> Check-in is at 2:00 PM and check-out is at 12:00 PM. Early check-in or late check-out is subject to availability.
+    </div>
+    <div class="policy">
+      <strong>ID Requirement:</strong> Please present a valid government-issued ID upon check-in for verification purposes.
+    </div>
+
+    <strong>PLEASE PRESENT THIS TO THE ADMIN DESK ONCE YOU'RE THERE!</strong>
+
+    <h2>Need Help?</h2>
+    <p>If you have any questions or need to make changes to your booking, please contact us at <a href="mailto:support@yourresort.com">support@yourresort.com</a> or call +63 912 345 6789.</p>
+
+    <p>We look forward to welcoming you!</p>
+    <p>Best regards,<br>The {{ resort_name }} Team</p>
+
+    <div class="footer">
+      &copy; {{ current_year }} {{ resort_name }}. All rights reserved.
+    </div>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // GCash reference field validation
+      var refInput = document.getElementById('reference_number');
+      var confirmBtn = document.getElementById('confirmBtn');
+      var refErrorMsg = document.getElementById('refErrorMsg');
+      if(refInput && confirmBtn && refErrorMsg) {
+        refInput.addEventListener('input', function() {
+          this.value = this.value.replace(/\D/g, '');
+          if(this.value.length === 13) {
+            confirmBtn.disabled = false;
+            refErrorMsg.style.display = 'none';
+          } else {
+            confirmBtn.disabled = true;
+            refErrorMsg.style.display = (this.value.length > 0) ? 'block' : 'none';
+          }
+        });
+      }
+      // Card last 4 digits only numeric
+      var cardLast4 = document.getElementById('card_last4');
+      if(cardLast4) {
+        cardLast4.addEventListener('input', function() {
+          this.value = this.value.replace(/\D/g, '').slice(0,4);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
