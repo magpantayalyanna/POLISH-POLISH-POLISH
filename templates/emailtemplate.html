@@ -147,16 +147,16 @@
     <h2>Booking Details</h2>
     <table>
       <tr><th>Hotel / Resort</th><td>{{ resort_name }}</td></tr>
-      <tr><th>Check-in</th><td>{{ checkin_date }} at {{ checkin_time }}</td></tr>
-      <tr><th>Check-out</th><td>{{ checkout_date }} at {{ checkout_time }}</td></tr>
+      <tr><th>Check-in</th><td>{{ checkin_date[:16] }} at {{ checkin_time }}</td></tr>
+      <tr><th>Check-out</th><td>{{ checkout_date[:16] }} at {{ checkout_time }}</td></tr>
       <tr><th>Number of nights</th><td>{{ nights }}</td></tr>
       <tr><th>Room Type</th><td>{{ room_type }}</td></tr>
       <tr><th>Guests</th><td>{{ guests }}</td></tr>
       <tr><th>Special Requests</th><td>{% if special_requests %}{{ special_requests }}{% else %}<em>None</em>{% endif %}</td></tr>
       <tr><th>Mode of Payment</th><td>{{ payment_method }}</td></tr>
-      <tr><th>Total Amount</th><td>₱ {{ '%.2f'|format(total_amount|float) }}</td></tr>
-      <tr><th>Down Payment</th><td>₱ {{ '%.2f'|format(downpayment|float) }}</td></tr>
-      <tr><th>Remaining Balance</th><td>₱ {{ '%.2f'|format(remaining_balance|float) }}</td></tr>
+      <tr><th>Total Amount</th><td>₱ {{ "{:,.2f}".format(total_amount|float) }}</td></tr>
+      <tr><th>Down Payment</th><td>₱ {{ "{:,.2f}".format(downpayment|float) }}</td></tr>
+      <tr><th>Remaining Balance</th><td>₱ {{ "{:,.2f}".format(remaining_balance|float) }}</td></tr>
       {% if card_holder and card_last4 and card_type and card_reference %}
       <tr><th colspan="2" style="background:#e2e8f0;color:#34495e;">Card Payment Details (Proof)</th></tr>
       <tr><th>Cardholder Name</th><td>{{ card_holder }}</td></tr>
@@ -216,7 +216,7 @@
           <input type="text" id="card_last4" name="card_last4" maxlength="4" pattern="\d{4}" class="proof-input" required>
           <span class="proof-label">Reference Number / Transaction ID:</span>
           <input type="text" id="card_reference" name="card_reference" maxlength="32" class="proof-input" required>
-      
+     
           <!-- Hidden fields for booking data -->
           <input type="hidden" name="resort_name" value="{{ resort_name }}">
           <input type="hidden" name="guest_first_name" value="{{ guest_first_name }}">

@@ -163,7 +163,7 @@ def emailtemplate():
         total_amount = float(total_amount)
     except Exception:
         total_amount = 0.0
-    downpayment = round(total_amount * 0.10, 2)
+    downpayment = round(total_amount * 0.15, 2)
     remaining_balance = round(total_amount - downpayment, 2)
     checkin_time = request.form.get('checkin_time', "2:00 PM")
     checkout_time = request.form.get('checkout_time', "12:00 PM")
@@ -317,6 +317,8 @@ def update_status(booking_id):
     else:
         flash('No status provided.', 'danger')
     return redirect(url_for('head_dashboard'))
+
+
 
 if __name__ == '__main__':
     init_db()

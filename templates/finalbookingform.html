@@ -15,31 +15,11 @@
     <form class="space-y-4" method="post" action="{{ url_for('emailtemplate') }}" autocomplete="off" id="bookingForm">
       <!-- Name and Contact -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input
-          type="text"
-          name="first_name"
-          placeholder="First name *"
-          class="border rounded px-4 py-2 w-full"
-          pattern="^[A-Za-z\s\-]+$"
-          title="Only letters, spaces, and hyphens allowed"
-          required
-          autocomplete="off"
-          oninput="this.value = this.value.replace(/[^A-Za-z\s\-]/g, '')"
-        >
-        <input
-          type="text"
-          name="last_name"
-          placeholder="Last name *"
-          class="border rounded px-4 py-2 w-full"
-          pattern="^[A-Za-z\s\-]+$"
-          title="Only letters, spaces, and hyphens allowed"
-          required
-          autocomplete="off"
-          oninput="this.value = this.value.replace(/[^A-Za-z\s\-]/g, '')"
-        >
+        <input type="text" name="first_name" placeholder="First name *" class="border rounded px-4 py-2 w-full" pattern="[A-Za-z\s\-]+" title="Only letters, spaces, and hyphens allowed" required>
+        <input type="text" name="last_name" placeholder="Last name *" class="border rounded px-4 py-2 w-full" pattern="[A-Za-z\s\-]+" title="Only letters, spaces, and hyphens allowed" required>
       </div>
       <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
-      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^(\+?\d{11})$" title="Enter a valid phone number with 11 digits (numbers only, can start with + sign)" required>
+      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^(\+?\d{11})$" title="Enter a valid phone number with 11 digits (numbers only, can start with + sign)" required
 
       <!-- Special Requests -->
       <div class="mt-6">
@@ -105,8 +85,8 @@
               <option value="Credit Card (Visa)">Credit Card </option>
               <option value="Debit Card (Mastercard)">Debit Card </option>
             </select>
-            <input type="text" id="cardNumber" name="card_number" placeholder="Card Number (16 digits)" class="border rounded px-4 py-3 w-full mb-4" maxlength="19" pattern="\d{4}-\d{4}-\d{4}-\d{4}" title="Enter 16 digits (auto-formats as XXXX-XXXX-XXXX-XXXX)" inputmode="numeric">
-            <input type="text" id="cardHolderName" name="card_holder" placeholder="Card Holder Name" class="border rounded px-4 py-3 w-full mb-4" pattern="^[A-Za-z\s\-\.]+$" title="Only letters, spaces, dot and hyphens allowed" autocomplete="off">
+            <input type="text" id="cardNumber" name="card_number" placeholder="Card Number (12 digits)" class="border rounded px-4 py-3 w-full mb-4" maxlength="14" pattern="\d{4}-\d{4}-\d{4}" title="Enter 12 digits (auto-formats as XXXX-XXXX-XXXX)" inputmode="numeric">
+            <input type="text" id="cardHolderName" name="card_holder" placeholder="Card Holder Name" class="border rounded px-4 py-3 w-full mb-4" pattern="[A-Za-z\s\-\.]+" title="Only letters, spaces, dot and hyphens allowed" >
             <input type="text" id="expiryDate" name="expiry_date" placeholder="Card Expiry Date (MM/YY)" class="border rounded px-4 py-3 w-full mb-4" pattern="^(0[1-9]|1[0-2])\/\d{2}$" title="Format: MM/YY" >
             <input type="text" id="ccv" name="ccv" placeholder="CCV" class="border rounded px-4 py-3 w-full" maxlength="3" pattern="\d{3}" inputmode="numeric" title="3 digits only" >
             <div class="mt-4">
@@ -234,6 +214,7 @@ function setBankFieldsRequired(required) {
   });
 }
 
+// Helper functions below are unchanged from your original, plus at the end we set card_amount_paid for backend.
 function getParam(name) {
   const url = new URL(window.location.href);
   return url.searchParams.get(name) || '';
@@ -297,20 +278,6 @@ const resortFeatures = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-  // --- Real-time block for first name and last name (letters only, no numbers) ---
-  var firstName = document.querySelector('input[name="first_name"]');
-  var lastName = document.querySelector('input[name="last_name"]');
-  if (firstName) {
-    firstName.addEventListener('input', function(e) {
-      e.target.value = e.target.value.replace(/[^A-Za-z\s\-]/g, '');
-    });
-  }
-  if (lastName) {
-    lastName.addEventListener('input', function(e) {
-      e.target.value = e.target.value.replace(/[^A-Za-z\s\-]/g, '');
-    });
-  }
-
   // Get params from URL
   const checkin = getParam('checkin');
   const checkout = getParam('checkout');
@@ -401,13 +368,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Card number: auto-format with dashes after every 4 digits (16 digits total)
+  // Card number: auto-format with dashes after every 4 digits (12 digits total)
   const cardNumberInput = document.getElementById('cardNumber');
   if (cardNumberInput) {
     cardNumberInput.addEventListener('input', function(e) {
       // Remove all non-digit characters
-      let digits = e.target.value.replace(/\D/g, '').slice(0, 16); // Strictly 16 digits
-
+      let digits = e.target.value.replace(/\D/g, '').slice(0, 12); // Strictly 12 digits
+     
       // Add dashes after every 4 digits
       let formatted = '';
       for (let i = 0; i < digits.length; i++) {
@@ -416,34 +383,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         formatted += digits[i];
       }
-
+     
       // Update the field
       e.target.value = formatted;
-
+     
       // Validate (show error if incomplete)
-      if (digits.length === 16) {
-        e.target.setCustomValidity('');
+      if (digits.length === 12) {
+        e.target.setCustomValidity(''); // Valid
       } else {
-        e.target.setCustomValidity('Please enter exactly 16 digits');
+        e.target.setCustomValidity('Please enter exactly 12 digits');
       }
     });
-
+   
+    // Validate on blur (when user leaves the field)
     cardNumberInput.addEventListener('blur', function(e) {
       const digits = e.target.value.replace(/\D/g, '');
-      if (digits.length !== 16) {
-        e.target.setCustomValidity('Please enter exactly 16 digits');
+      if (digits.length !== 12) {
+        e.target.setCustomValidity('Please enter exactly 12 digits');
       } else {
-        e.target.setCustomValidity('');
+        e.target.setCustomValidity(''); // Valid
       }
-    });
-  }
-
-  // Card Holder Name: block numbers in real time
-  const cardHolderInput = document.getElementById('cardHolderName');
-  if (cardHolderInput) {
-    cardHolderInput.addEventListener('input', function(e) {
-      // Only allow letters, spaces, hyphens, dot
-      e.target.value = e.target.value.replace(/[^A-Za-z\s\-\.]/g, '');
     });
   }
 
@@ -463,17 +422,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Set card_amount_paid for backend if Bank Transfer is chosen:
   document.getElementById('bookingForm').addEventListener('submit', function(e) {
-    const method = document.getElementById('paymentMethod').value;
-    const downpayment = Math.round(totalPrice * 0.15 * 100) / 100;
-    if (method === 'Bank Transfer') {
-      document.getElementById('hiddenCardAmountPaid').value = (downpayment + 50).toFixed(2);
-    } else {
-      document.getElementById('hiddenCardAmountPaid').value = '';
-    }
+      const method = document.getElementById('paymentMethod').value;
+      const downpayment = Math.round(totalPrice * 0.15 * 100) / 100;
+      
+      // Set all required hidden fields
+      document.getElementById('hiddenTotalAmount').value = totalPrice.toFixed(2);
+      document.getElementById('hiddenCardAmountPaid').value = downpayment.toFixed(2);
+      
+      if (method === 'Bank Transfer') {
+          document.getElementById('hiddenCardAmountPaid').value = (downpayment + 50).toFixed(2);
+      }
   });
-
 });
 </script>
 </body>
