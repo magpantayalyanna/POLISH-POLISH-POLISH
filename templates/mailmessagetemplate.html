@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Way2Go Booking Confirmation</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f8fafc;
+      margin: 0;
+      padding: 20px 0;
+      color: #2e3a59;
+    }
+
+    .container {
+      max-width: 920px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      padding: 30px 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .header img {
+      width: 70px;
+      margin-bottom: 10px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      color: #2e3a59;
+    }
+
+    .info-row {
+      font-size: 14px;
+      margin: 6px 0;
+    }
+
+    .info-label {
+      font-weight: bold;
+      color: #4a5568;
+      display: inline-block;
+      width: 130px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 25px;
+      font-size: 14px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    th {
+      background-color: #f1f5f9;
+    }
+
+    .total-row td {
+      font-weight: bold;
+      font-size: 15px;
+      border-top: 2px solid #cbd5e0;
+    }
+
+    .policies {
+      margin-top: 40px;
+      background-color: #fefcbf;
+      border-left: 5px solid #ecc94b;
+      padding: 18px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .policies ul {
+      padding-left: 18px;
+      margin: 10px 0 0 0;
+    }
+
+    .policies li {
+      margin-bottom: 8px;
+    }
+
+    .footer-msg {
+      margin-top: 24px;
+      font-weight: bold;
+      font-size: 15px;
+      color: #2f3b55;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px 15px;
+      }
+
+      .info-label {
+        width: 100%;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .info-row {
+        font-size: 13px;
+        margin: 10px 0;
+      }
+
+      table th, table td {
+        padding: 8px;
+        font-size: 13px;
+      }
+
+      .header h1 {
+        font-size: 20px;
+      }
+
+      .footer-msg {
+        font-size: 14px;
+        margin-top: 20px;
+      }
+
+      .policies {
+        font-size: 13px;
+        padding: 15px;
+      }
+
+      .policies li {
+        margin-bottom: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="static/images/log0_nobg.png" alt="Way2Go Logo" />
+      <h1>Way2Go Travel</h1>
+      <p>way2gobatangas@gmail.com</p>
+    </div>
+
+    <div class="info-row"><span class="info-label">Guest:</span> {{ guest_first_name }} {{ guest_last_name }}</div>
+    <div class="info-row"><span class="info-label">Resort:</span> {{ resort_name }}</div>
+    <div class="info-row"><span class="info-label">Room Type:</span> {{ room_type }}</div>
+    <div class="info-row"><span class="info-label">Guests:</span> {{ guests }}</div>
+    <div class="info-row"><span class="info-label">Check-in:</span> {{ checkin_date }} at {{ checkin_time }}</div>
+    <div class="info-row"><span class="info-label">Check-out:</span> {{ checkout_date }} at {{ checkout_time }}</div>
+    <div class="info-row"><span class="info-label">Status:</span> Confirmed</div>
+    <div class="info-row"><span class="info-label">Special Requests:</span> {% if special_requests %}{{ special_requests }}{% else %}None{% endif %}</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      
+      <tbody>
+        <tr><td>Total Amount</td><td>₱{{ '%.2f' | format(total_amount | float) }}</td></tr>
+        <tr><td>Downpayment</td><td>₱{{ '%.2f' | format(downpayment | float) }}</td></tr>
+        <tr class="total-row"><td>Remaining Balance</td><td>₱{{ '%.2f' | format(remaining_balance | float) }}</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-row"><span class="info-label">Payment Method:</span> {{ payment_method }}</div>
+    {% if card_holder and card_type and card_last4 and card_reference %}
+    <div class="info-row"><span class="info-label">Cardholder:</span> {{ card_holder }}</div>
+    <div class="info-row"><span class="info-label">Card Type:</span> {{ card_type }}</div>
+    <div class="info-row"><span class="info-label">Card Last 4:</span> **** {{ card_last4 }}</div>
+    <div class="info-row"><span class="info-label">Reference #:</span> {{ card_reference }}</div>
+    {% endif %}
+
+    <p class="footer-msg">See you soon at {{ resort_name }}!</p>
+
+    <div class="policies">
+      <p><strong>Important Policies</strong></p>
+      <ul>
+        <li><strong>Cancellation:</strong> Cancel 7+ days before = full refund. Within 7 days, fees apply.</li>
+        <li><strong>Refund:</strong> Processed within 5–7 business days after approval.</li>
+        <li><strong>Check-in:</strong> 2:00 PM</li>
+        <li><strong>Check-out:</strong> 12:00 PM (subject to availability)</li>
+        <li><strong>ID:</strong> Please present a valid government-issued ID.</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

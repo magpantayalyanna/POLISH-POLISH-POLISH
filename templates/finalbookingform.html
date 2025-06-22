@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Booking Page</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+<div class="max-w-7xl mx-auto py-10 px-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+  <!-- Left Side: Guest Form -->
+  <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow">
+    <h2 class="text-xl font-semibold mb-4">Who's the lead guest?</h2>
+    <form class="space-y-4" method="post" action="{{ url_for('emailtemplate') }}" autocomplete="off" id="bookingForm">
+      <!-- Name and Contact -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <input
+          type="text"
+          name="first_name"
+          placeholder="First name *"
+          class="border rounded px-4 py-2 w-full"
+          pattern="^[A-Za-z\s\-]+$"
+          title="Only letters, spaces, and hyphens allowed"
+          required
+          autocomplete="off"
+          oninput="this.value = this.value.replace(/[^A-Za-z\s\-]/g, '')"
+        >
+        <input
+          type="text"
+          name="last_name"
+          placeholder="Last name *"
+          class="border rounded px-4 py-2 w-full"
+          pattern="^[A-Za-z\s\-]+$"
+          title="Only letters, spaces, and hyphens allowed"
+          required
+          autocomplete="off"
+          oninput="this.value = this.value.replace(/[^A-Za-z\s\-]/g, '')"
+        >
+      </div>
+      <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
+      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^(\+?\d{11})$" title="Enter a valid phone number with 11 digits (numbers only, can start with + sign)" required>
+
+      <!-- Special Requests -->
+      <div class="mt-6">
+        <h3 class="font-medium mb-2">Special requests</h3>
+        <p class="text-sm text-gray-500 mb-2">This is a non-smoking property</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded">
+          <div>
+            <label class="block font-medium text-sm mb-1">Room type preference</label>
+            <label class="flex items-center space-x-2 mb-1">
+              <input type="radio" name="smoking" value="Non-smoking" class="form-radio" required> <span>Non-smoking</span>
+            </label>
+            <label class="flex items-center space-x-2">
+              <input type="radio" name="smoking" value="Smoking" class="form-radio"> <span>Smoking</span>
+            </label>
+          </div>
+          <div>
+            <label class="block font-medium text-sm mb-1">Bed preference</label>
+            <label class="flex items-center space-x-2 mb-1">
+              <input type="radio" name="bed" value="Large bed" class="form-radio" required> <span>I'd like a large bed</span>
+            </label>
+            <label class="flex items-center space-x-2">
+              <input type="radio" name="bed" value="Twin beds" class="form-radio"> <span>I'd like twin beds</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden booking summary fields from JS -->
+      <input type="hidden" name="resort_name" id="hiddenResortName">
+      <input type="hidden" name="checkin_date" id="hiddenCheckinDate">
+      <input type="hidden" name="checkout_date" id="hiddenCheckoutDate">
+      <input type="hidden" name="nights" id="hiddenNights">
+      <input type="hidden" name="room_type" id="hiddenRoomType">
+      <input type="hidden" name="guests" id="hiddenGuests">
+      <input type="hidden" name="special_requests" id="hiddenSpecialRequests">
+      <input type="hidden" name="payment_method" id="hiddenPaymentMethod">
+      <input type="hidden" name="total_amount" id="hiddenTotalAmount">
+      <input type="hidden" name="card_amount_paid" id="hiddenCardAmountPaid">
+
+      <!-- Mode of Payment -->
+      <div class="mt-8">
+        <label for="paymentMethod" class="block font-medium text-sm mb-3">Mode of Payment</label>
+        <select id="paymentMethod" name="payment_method_real" onchange="handlePaymentChange()" class="border rounded px-4 py-3 w-full" required>
+          <option disabled selected>Select payment method</option>
+          <option value="GCash">GCash</option>
+          <option value="Bank Transfer">Bank Transfer</option>
+        </select>
+        <!-- Payment Dynamic Container -->
+        <div id="paymentDetailsContainer" class="transition-all duration-300 overflow-hidden max-h-0">
+          <!-- GCash Message -->
+          <div id="gcashMessage" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-5 rounded mt-4 hidden">
+            <p class="font-semibold mb-1">You have chosen to pay by GCash.</p>
+            <p>You will be forwarded to the GCash website to proceed with this transaction.</p>
+            <p class="mt-3">The required downpayment you need to pay now is: <strong id="gcashTotal">₱ 0.00</strong></p>
+          </div>
+          <!-- Bank/Card Details -->
+          <div id="bankDetails" class="bg-blue-100 border-l-4 border-blue-500 p-5 rounded mt-4 hidden">
+            <p class="font-semibold mb-4">Please fill in your bank details for the transfer:</p>
+            <!-- Card Type Selector -->
+            <label class="block font-medium text-sm mb-1">Card Type</label>
+            <select name="card_type" id="cardType" class="border rounded px-4 py-2 w-full mb-4">
+              <option disabled selected value="">Select card type</option>
+              <option value="Credit Card (Visa)">Credit Card </option>
+              <option value="Debit Card (Mastercard)">Debit Card </option>
+            </select>
+            <input type="text" id="cardNumber" name="card_number" placeholder="Card Number (16 digits)" class="border rounded px-4 py-3 w-full mb-4" maxlength="19" pattern="\d{4}-\d{4}-\d{4}-\d{4}" title="Enter 16 digits (auto-formats as XXXX-XXXX-XXXX-XXXX)" inputmode="numeric">
+            <input type="text" id="cardHolderName" name="card_holder" placeholder="Card Holder Name" class="border rounded px-4 py-3 w-full mb-4" pattern="^[A-Za-z\s\-\.]+$" title="Only letters, spaces, dot and hyphens allowed" autocomplete="off">
+            <input type="text" id="expiryDate" name="expiry_date" placeholder="Card Expiry Date (MM/YY)" class="border rounded px-4 py-3 w-full mb-4" pattern="^(0[1-9]|1[0-2])\/\d{2}$" title="Format: MM/YY" >
+            <input type="text" id="ccv" name="ccv" placeholder="CCV" class="border rounded px-4 py-3 w-full" maxlength="3" pattern="\d{3}" inputmode="numeric" title="3 digits only" >
+            <div class="mt-4">
+              <div class="flex justify-between text-sm">
+                <span>Downpayment (15%):</span>
+                <span id="bankDownpayment">₱ 0.00</span>
+              </div>
+              <div class="flex justify-between text-sm">
+                <span>Bank Transfer Fee:</span>
+                <span id="bankFeeLine">₱ 50.00</span>
+              </div>
+              <div class="flex justify-between text-base font-semibold mt-2">
+                <span>Total to Transfer:</span>
+                <span id="totalToTransferLine">₱ 0.00</span>
+              </div>
+              <p class="mt-2 text-xs text-gray-500 italic">
+                Bank transfer fee is paid directly to the bank and added to your downpayment.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Book Now Button -->
+      <div class="mt-8 text-right">
+        <button type="submit" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 font-semibold shadow">
+          Book Now
+        </button>
+      </div>
+    </form>
+  </div>
+ 
+  <!-- Right Side: Booking Summary -->
+  <div class="bg-white p-6 rounded-xl shadow space-y-4">
+    <div class="flex justify-between">
+      <div>
+        <p class="text-sm" id="summaryCheckin"><strong>Check-in:</strong></p>
+      </div>
+      <div>
+        <p class="text-sm" id="summaryCheckout"><strong>Check-out:</strong></p>
+      </div>
+      <div>
+        <p class="text-sm" id="summaryNights">Nights</p>
+      </div>
+    </div>
+    <div class="mb-2">
+      <h3 class="text-lg font-semibold" id="summaryResort"></h3>
+      <p class="text-blue-600 text-sm" id="summaryLocation"></p>
+    </div>
+    <div class="flex space-x-3 mt-3">
+      <div class="text-sm">
+        <p id="summaryRoom"></p>
+        <p id="summaryGuest"></p>
+      </div>
+    </div>
+    <ul class="text-sm text-green-700 list-disc list-inside space-y-1" id="featureList"></ul>
+    <div class="flex gap-2" id="featureTags"></div>
+    <div class="bg-gray-50 p-6 rounded-xl shadow mt-6 text-sm text-gray-700">
+      <h3 class="text-lg font-semibold mb-4">Price Breakdown</h3>
+      <div class="flex justify-between">
+        <span>Room price (<span id="priceRoomCount2"></span> x <span id="priceNightCount2"></span>)</span>
+        <span id="roomPrice"></span>
+      </div>
+      <div class="flex justify-between">
+        <span>Taxes and fees</span>
+        <span id="taxes"></span>
+      </div>
+      <div class="flex justify-between">
+        <span>Booking fees</span>
+        <span class="font-semibold text-green-600">FREE</span>
+      </div>
+      <hr class="my-3 border-gray-300" />
+      <div class="flex justify-between font-bold text-lg">
+        <span>Price</span>
+        <span id="totalPrice"></span>
+      </div>
+      <div class="flex justify-between mt-3">
+        <span class="font-semibold text-green-700">Downpayment (15%):</span>
+        <span id="downpaymentAmount" class="font-semibold text-green-700"></span>
+      </div>
+      <p class="mt-2 text-xs text-gray-500 italic">
+        Pay 15% downpayment now via GCash or Bank to confirm your booking. The rest can be settled upon check-in.<br>
+        Included in price: Service charge 15%, City tax 1%, Tax 12%
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+function handlePaymentChange() {
+  const method = document.getElementById('paymentMethod').value;
+  const gcashMessage = document.getElementById('gcashMessage');
+  const bankDetails = document.getElementById('bankDetails');
+  const paymentContainer = document.getElementById('paymentDetailsContainer');
+  gcashMessage.classList.add('hidden');
+  bankDetails.classList.add('hidden');
+  paymentContainer.classList.remove('max-h-[1000px]');
+  if (method === 'gcash' || method === 'GCash') {
+    gcashMessage.classList.remove('hidden');
+    paymentContainer.classList.add('max-h-[1000px]');
+    setBankFieldsRequired(false);
+  } else if (method === 'bank' || method === 'Bank Transfer') {
+    bankDetails.classList.remove('hidden');
+    paymentContainer.classList.add('max-h-[1000px]');
+    setBankFieldsRequired(true);
+  }
+  document.getElementById('hiddenPaymentMethod').value = method;
+}
+
+function setBankFieldsRequired(required) {
+  const ids = [
+    'cardType',
+    'cardNumber',
+    'cardHolderName',
+    'expiryDate',
+    'ccv',
+    'cardReference'
+  ];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (required) el.setAttribute('required', 'required');
+      else el.removeAttribute('required');
+    }
+  });
+}
+
+function getParam(name) {
+  const url = new URL(window.location.href);
+  return url.searchParams.get(name) || '';
+}
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function getNightCount(checkin, checkout) {
+  const start = new Date(checkin);
+  const end = new Date(checkout);
+  const diff = end - start;
+  if (isNaN(diff) || diff <= 0) return 1;
+  return Math.round(diff / (1000 * 60 * 60 * 24));
+}
+function getRooms(summary) {
+  const match = summary.match(/(\d+)\sroom/);
+  return match ? parseInt(match[1], 10) : 1;
+}
+function formatPeso(num) {
+  return '₱ ' + num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+const resortFeatures = {
+  "BlueWave Pool Resort": {
+    features: [
+      "Luggage storage available", "24 hours check-in", "1 king bed", "Breakfast for 2 people", "Book and pay now", "Free kayak rental", "Parking", "Free WiFi", "Free fitness center access"
+    ],
+    tags: ["Parking", "Free Wi‑Fi", "Kayak"]
+  },
+  "AquaVibe Resort": {
+    features: [
+      "Welcome drink upon arrival", "Private beach access", "2 queen beds", "Breakfast for 4 people", "Book and pay now", "Golf cart service", "Parking", "Free WiFi", "Swimming pool access"
+    ],
+    tags: ["Beach Access", "Free Wi‑Fi", "Parking", "Golf Cart"]
+  },
+  "CrystalSplash Poolside Haven": {
+    features: [
+      "Infinity pool", "24 hours check-in", "1 king bed", "Breakfast for 2 people", "Book and pay now", "Free welcome massage", "Parking", "Free WiFi", "Free fitness center access"
+    ],
+    tags: ["Infinity Pool", "Free Wi‑Fi", "Parking", "Spa"]
+  },
+  "Lagoon Cove Resort ": {
+    features: [
+      "Luggage storage available", "24 hours check-in", "2 double beds", "Breakfast for 2 people", "Book and pay now", "Kids play area", "Parking", "Free WiFi", "Swimming pool access"
+    ],
+    tags: ["Parking", "Free Wi‑Fi", "Kids Area", "Pool"]
+  },
+  "Sunset Waters Pool Resort": {
+    features: [
+      "Diving lessons available", "24 hours check-in", "1 queen bed", "Breakfast for 2 people", "Book and pay now", "Snorkeling equipment rental", "Parking", "Free WiFi", "Free fitness center access"
+    ],
+    tags: ["Diving", "Free Wi‑Fi", "Parking", "Snorkeling"]
+  },
+  "CoolSprings Private Resort": {
+    features: [
+      "Holistic wellness center", "Vegan breakfast for 2 people", "1 king bed", "Book and pay now", "Spa & massage included", "Yoga classes available", "Parking", "Free WiFi", "24 hours check-in"
+    ],
+    tags: ["Parking", "Free Wi‑Fi", "Wellness", "Yoga"]
+  }
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  // --- Real-time block for first name and last name (letters only, no numbers) ---
+  var firstName = document.querySelector('input[name="first_name"]');
+  var lastName = document.querySelector('input[name="last_name"]');
+  if (firstName) {
+    firstName.addEventListener('input', function(e) {
+      e.target.value = e.target.value.replace(/[^A-Za-z\s\-]/g, '');
+    });
+  }
+  if (lastName) {
+    lastName.addEventListener('input', function(e) {
+      e.target.value = e.target.value.replace(/[^A-Za-z\s\-]/g, '');
+    });
+  }
+
+  // Get params from URL
+  const checkin = getParam('checkin');
+  const checkout = getParam('checkout');
+  const summary = getParam('summary');
+  const resort = getParam('resort');
+  const room = getParam('roomTitle') || getParam('room');
+  const roomPrice = getParam('roomPrice');
+  const roomPriceNumber = parseInt(getParam('roomPriceNumber')) || 0;
+  const location = getParam('location');
+
+  // Update summary sidebar
+  document.getElementById('summaryCheckin').innerHTML = `<strong>Check-in:</strong> ${formatDate(checkin)}`;
+  document.getElementById('summaryCheckout').innerHTML = `<strong>Check-out:</strong> ${formatDate(checkout)}`;
+  document.getElementById('summaryResort').innerText = resort;
+  document.getElementById('summaryLocation').innerText = location;
+  document.getElementById('summaryRoom').innerText = room;
+  document.getElementById('summaryGuest').innerText = summary;
+
+  // Calculate nights, rooms, price
+  const nights = getNightCount(checkin, checkout);
+  const numRooms = getRooms(summary);
+  document.getElementById('summaryNights').innerText = nights + ' night' + (nights > 1 ? 's' : '');
+
+  // Price calculation
+  const roomPriceTotal = roomPriceNumber * numRooms * nights;
+  const taxes = Math.round(roomPriceTotal * 0.23 * 100) / 100;
+  const totalPrice = roomPriceTotal + taxes;
+
+  document.getElementById('priceRoomCount2').innerText = numRooms + " room" + (numRooms > 1 ? "s" : "");
+  document.getElementById('priceNightCount2').innerText = nights + " night" + (nights > 1 ? "s" : "");
+  document.getElementById('roomPrice').innerText = formatPeso(roomPriceTotal);
+  document.getElementById('taxes').innerText = formatPeso(taxes);
+  document.getElementById('totalPrice').innerText = formatPeso(totalPrice);
+
+  // Calculate 15% downpayment
+  const downpayment = Math.round(totalPrice * 0.15 * 100) / 100;
+  document.getElementById('downpaymentAmount').innerText = formatPeso(downpayment);
+
+  // GCash/Bank required payment is the downpayment
+  const gcashTotals = document.querySelectorAll('#gcashTotal');
+  gcashTotals.forEach(elem => elem.innerText = formatPeso(downpayment));
+
+  // Bank Transfer Fee logic (₱50)
+  const bankFee = 50;
+  document.getElementById('bankDownpayment').innerText = formatPeso(downpayment);
+  document.getElementById('bankFeeLine').innerText = formatPeso(bankFee);
+  document.getElementById('totalToTransferLine').innerText = formatPeso(downpayment + bankFee);
+
+  // Resort features/tags
+  const features = resortFeatures[resort]?.features || [
+    "Luggage storage available", "24 hours check-in", "1 king bed", "Breakfast for 2 people", "Book and pay now", "Parking", "Free WiFi", "Free fitness center access"
+  ];
+  const tags = resortFeatures[resort]?.tags || ["Parking", "Free Wi‑Fi"];
+  const featureList = document.getElementById('featureList');
+  featureList.innerHTML = '';
+  features.forEach(f => {
+    const li = document.createElement('li');
+    li.textContent = f;
+    li.className = "text-green-700";
+    featureList.appendChild(li);
+  });
+  const featureTags = document.getElementById('featureTags');
+  featureTags.innerHTML = '';
+  tags.forEach(t => {
+    const span = document.createElement('span');
+    span.className = "bg-green-100 text-green-800 text-xs px-2 py-1 rounded";
+    span.textContent = t;
+    featureTags.appendChild(span);
+  });
+
+  // Fill hidden form fields for submission
+  document.getElementById('hiddenResortName').value = resort;
+  document.getElementById('hiddenCheckinDate').value = checkin;
+  document.getElementById('hiddenCheckoutDate').value = checkout;
+  document.getElementById('hiddenNights').value = nights;
+  document.getElementById('hiddenRoomType').value = room;
+  document.getElementById('hiddenGuests').value = summary;
+  document.getElementById('hiddenTotalAmount').value = totalPrice;
+
+  // Expiry date auto-format MM/YY
+  const expiryInput = document.getElementById('expiryDate');
+  if (expiryInput) {
+    expiryInput.addEventListener('input', function(e) {
+      let v = e.target.value.replace(/\D/g, '');
+      if (v.length > 4) v = v.slice(0, 4);
+      if (v.length >= 3) v = v.slice(0, 2) + '/' + v.slice(2, 4);
+      e.target.value = v;
+    });
+  }
+
+  // Card number: auto-format with dashes after every 4 digits (16 digits total)
+  const cardNumberInput = document.getElementById('cardNumber');
+  if (cardNumberInput) {
+    cardNumberInput.addEventListener('input', function(e) {
+      // Remove all non-digit characters
+      let digits = e.target.value.replace(/\D/g, '').slice(0, 16); // Strictly 16 digits
+
+      // Add dashes after every 4 digits
+      let formatted = '';
+      for (let i = 0; i < digits.length; i++) {
+        if (i > 0 && i % 4 === 0) {
+          formatted += '-';
+        }
+        formatted += digits[i];
+      }
+
+      // Update the field
+      e.target.value = formatted;
+
+      // Validate (show error if incomplete)
+      if (digits.length === 16) {
+        e.target.setCustomValidity('');
+      } else {
+        e.target.setCustomValidity('Please enter exactly 16 digits');
+      }
+    });
+
+    cardNumberInput.addEventListener('blur', function(e) {
+      const digits = e.target.value.replace(/\D/g, '');
+      if (digits.length !== 16) {
+        e.target.setCustomValidity('Please enter exactly 16 digits');
+      } else {
+        e.target.setCustomValidity('');
+      }
+    });
+  }
+
+  // Card Holder Name: block numbers in real time
+  const cardHolderInput = document.getElementById('cardHolderName');
+  if (cardHolderInput) {
+    cardHolderInput.addEventListener('input', function(e) {
+      // Only allow letters, spaces, hyphens, dot
+      e.target.value = e.target.value.replace(/[^A-Za-z\s\-\.]/g, '');
+    });
+  }
+
+  // CCV: numeric only
+  const ccvInput = document.getElementById('ccv');
+  if (ccvInput) {
+    ccvInput.addEventListener('input', function(e) {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 3);
+    });
+  }
+
+  // Phone: numeric only (allows leading +)
+  const phoneInput = document.querySelector('input[name="phone"]');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', function(e) {
+      e.target.value = e.target.value.replace(/[^\d+]/g, '');
+    });
+  }
+
+  // Set card_amount_paid for backend if Bank Transfer is chosen:
+  document.getElementById('bookingForm').addEventListener('submit', function(e) {
+    const method = document.getElementById('paymentMethod').value;
+    const downpayment = Math.round(totalPrice * 0.15 * 100) / 100;
+    if (method === 'Bank Transfer') {
+      document.getElementById('hiddenCardAmountPaid').value = (downpayment + 50).toFixed(2);
+    } else {
+      document.getElementById('hiddenCardAmountPaid').value = '';
+    }
+  });
+
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Feedback - Resorts Table</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #003f5c;
+            --accent: #2f4b7c;
+            --highlight: #a05195;
+            --background: #f9f9f9;
+            --text: #1e1e1e;
+            --white: #ffffff;
+            --lightgray: #e2e8f0;
+            --font: 'Inter', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font);
+            background-color: var(--background);
+            color: var(--text);
+            min-height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+        }
+        .main-content {
+            max-width: 800px;
+            margin: 40px auto 0 auto;
+            background: var(--background);
+            box-shadow: 0 4px 32px rgba(0,0,0,0.07);
+            border-radius: 16px;
+            min-height: 40vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: white;
+            padding: 24px 32px 14px 32px;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            font-size: 1.5rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+        .content {
+            padding: 32px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+        }
+        .feedback-table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+        }
+        .feedback-table-container h2 {
+            color: var(--primary);
+            margin-bottom: 18px;
+            font-size: 1.15rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 300px;
+            font-size: 1rem;
+            background: white;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--lightgray);
+        }
+        th {
+            background: var(--accent);
+            color: white;
+            font-weight: 500;
+        }
+        tr:hover {
+            background-color: #f8fafc;
+        }
+        .no-feedback {
+            text-align: center;
+            color: #acb5bd;
+            font-style: italic;
+            padding: 40px 0;
+            font-size: 1.1rem;
+        }
+        @media (max-width: 900px) {
+            .main-content { max-width: 98vw; }
+            .content { padding: 8px; }
+            .feedback-table-container { padding: 6px; }
+            table { min-width: 200px; font-size: 0.96rem; }
+        }
+    </style>
+    <!-- FontAwesome for icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="main-content">
+        <header>
+            Feedback - Resorts
+        </header>
+        <div class="content">
+            <div class="feedback-table-container">
+                <h2><i class="fas fa-table" style="color:var(--accent);margin-right:8px;"></i>Feedback Database Table</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feedback</th>
+                            <th>Resort</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if feedbacks and feedbacks|length > 0 %}
+                            {% for fb in feedbacks %}
+                                <tr>
+                                    <td>{{ fb['message'] }}</td>
+                                    <td>
+                                        {{ fb['resort_name'].replace('-', ' ').replace('poolside', 'Poolside').replace('private', 'Private').replace('pool', 'Pool').title() }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="2" class="no-feedback">No feedback yet.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
