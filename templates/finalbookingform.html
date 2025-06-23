@@ -38,7 +38,7 @@
         >
      
       <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
-      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^(\+?\d{11})$" title="Enter a valid phone number with 11 digits (numbers only, can start with + sign)" required>
+      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^\d{11}$" title="Enter a valid phone number with exactly 11 digits (numbers only)" required>
       <!-- Special Requests -->
       <div class="mt-6">
         <h3 class="font-medium mb-2">Special requests</h3>
@@ -47,7 +47,7 @@
           <div>
             <label class="block font-medium text-sm mb-1">Room type preference</label>
             <label class="flex items-center space-x-2 mb-1">
-              <input type="radio" name="smoking" value="Non-smoking" class="form-radio" required> <span>Non-smoking</span>
+              <input type="radio" name="smoking" value="Non-smoking" class="form-radio"> <span>Non-smoking</span>
             </label>
             <label class="flex items-center space-x-2">
               <input type="radio" name="smoking" value="Smoking" class="form-radio"> <span>Smoking</span>
@@ -56,7 +56,7 @@
           <div>
             <label class="block font-medium text-sm mb-1">Bed preference</label>
             <label class="flex items-center space-x-2 mb-1">
-              <input type="radio" name="bed" value="Large bed" class="form-radio" required> <span>I'd like a large bed</span>
+              <input type="radio" name="bed" value="Large bed" class="form-radio"> <span>I'd like a large bed</span>
             </label>
             <label class="flex items-center space-x-2">
               <input type="radio" name="bed" value="Twin beds" class="form-radio"> <span>I'd like twin beds</span>
