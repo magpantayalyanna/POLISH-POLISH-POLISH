@@ -22,7 +22,7 @@
       <input type="password" name="password" placeholder="Password" required>
       <input type="text" name="full_name" placeholder="Full Name">
       <input type="email" name="email" placeholder="Email">
-      <input type="text" name="contact_number" placeholder="Contact Number">
+      <input type="tel" name="contact_number" placeholder="Contact Number" pattern="[0-9]{11}" maxlength="11" required title="Enter an 11-digit number">
       <button type="submit">Sign Up</button>
       <a href="/login">Already have an account? Login</a>
     </form>

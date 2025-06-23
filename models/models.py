@@ -1,3 +1,4 @@
+from datetime import datetime
 from models.extensions import db
 
 class User(db.Model):
@@ -15,12 +16,33 @@ class Resort(db.Model):
     __tablename__ = 'resorts'
 
     id = db.Column(db.Integer, primary_key=True)
-    slug = db.Column(db.String, unique=True, nullable=False)
+    slug = db.Column(db.String, unique=True, nullable=False)  # This is resort_id in our design
     name = db.Column(db.String, nullable=False)
     image_url = db.Column(db.String)
     is_pet_friendly = db.Column(db.Integer, default=0)
     description = db.Column(db.Text)
+    location = db.Column(db.String)
+    google_maps_link = db.Column(db.String)
+    amenities = db.Column(db.JSON)
+    
+    # Relationship to rooms
+    rooms = db.relationship('Room', backref='resort', lazy=True, cascade='all, delete-orphan')
 
+
+class Room(db.Model):
+    __tablename__ = 'rooms'
+
+    id = db.Column(db.Integer, primary_key=True)
+    resort_slug = db.Column(db.String, db.ForeignKey('resorts.slug'), nullable=False)
+    room_name = db.Column(db.String(100), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    capacity_min = db.Column(db.Integer, nullable=False)
+    capacity_max = db.Column(db.Integer, nullable=False)
+    description = db.Column(db.Text)
+    image_url = db.Column(db.String(255))
+    amenities = db.Column(db.JSON)
+    total_slots = db.Column(db.Integer, default=5)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class AdminBooking(db.Model):
     __tablename__ = 'admin_bookings'
@@ -33,7 +55,7 @@ class AdminBooking(db.Model):
     checkout_date = db.Column(db.String)
     checkout_time = db.Column(db.String)
     nights = db.Column(db.Integer)
-    room_type = db.Column(db.String)
+    room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
     guests = db.Column(db.String)
     special_requests = db.Column(db.Text)
     payment_method = db.Column(db.String)
@@ -51,6 +73,7 @@ class AdminBooking(db.Model):
 
     # Optional relationships for easier joins/access
     resort = db.relationship('Resort', backref=db.backref('bookings', lazy=True))
+    room = db.relationship('Room', backref=db.backref('bookings', lazy=True))
     user = db.relationship('User', backref=db.backref('bookings', lazy=True))
 
 

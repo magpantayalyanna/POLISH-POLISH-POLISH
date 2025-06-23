@@ -65,289 +65,53 @@
   <header>
     <h1>Way2GO</h1>
   </header>
+  <body>
   
-    {% set resort_names = {
-      "bluewave-pool-resort": "BlueWave Pool Resort",
-      "aquavibe-resort": "AquaVibe Resort",
-      "crystalsplash-poolside-haven": "CrystalSplash Poolside Haven",
-      "lagoon-cove-resort": "Lagoon Cove Resort",
-      "sunset-waters-pool-resort": "Sunset Waters Pool Resort",
-      "coolsprings-private-resort": "CoolSprings Private Resort"
-    } %}
-  
-    {% if resort == "bluewave-pool-resort" %}
-      <section class="resort-section">
-        <div class="resort-image">
-          <img src="static/images/Resort 10.jpg" alt="Blue Wave Pool Resort">
-        </div>
-        <div class="resort-content">
-          <h2>{{ resort_names[resort] }}</h2>
-          <p>Enjoy a relaxing stay at BlueWave, featuring spacious pools and family-friendly amenities.</p>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
-          <ul>
-            <li>Wave pool</li>
-            <li>Cottages</li>
-            <li>Grill area</li>
-            <li>Kiddie pool</li>
-          </ul>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
-          <p>Lipa, Batangas</p>
-          <a href="https://www.google.com/maps?q=Lipa,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
-        </div>
-      </section>
-      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div onclick="openRoomModal('Garden Room','₱4,000/night','2–3 persons','Cozy room with garden views, queen-size bed, and breakfast.','static/images/Garden Type 1.jpg','Garden Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Garden Room</h3>
-            <p class="text-gray-700 font-medium mb-1">₱4,000/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–3 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Queen-size bed</li>
-              <li>Garden view</li>
-              <li>Complimentary breakfast</li>
-            </ul>
-          </div>
-          <div onclick="openRoomModal('Beachfront Suite','₱7,000/night','2–6 persons','Suites directly facing the sea, king-size bed, balcony.','static/images/Beach Front 1.jpg','Beachfront Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Beachfront Suite</h3>
-            <p class="text-gray-700 font-medium mb-1">₱7,000/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–5 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>King-size bed</li>
-              <li>Balcony with sea view</li>
-              <li>Direct beach access</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    {% elif resort == "aquavibe-resort" %}
-      <section class="resort-section">
-        <div class="resort-image">
-          <img src="static/images/Resort 1.jpg" alt="AquaVibe Resort">
-        </div>
-        <div class="resort-content">
-          <h2>{{ resort_names[resort] }}</h2>
-          <p>AquaVibe is the perfect getaway for groups and barkadas, with vibrant pools and party amenities.</p>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
-          <ul>
-            <li>Infinity pool</li>
-            <li>Function hall</li>
-            <li>Music lounge</li>
-            <li>Picnic area</li>
-          </ul>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
-          <p>San Juan, Batangas</p>
-          <a href="https://bit.ly/3HQMwoQ" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
-        </div>
-      </section>
-      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div onclick="openRoomModal('Mountain View Room','₱5,500/night','2–3 persons','Rooms overlooking lush mountains, twin beds.','static/images/Garden Type 2.jpg','Mountain View Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Mountain View Room</h3>
-            <p class="text-gray-700 font-medium mb-1">₱5,500/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–3 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Twin beds</li>
-              <li>Mountain view</li>
-            </ul>
-          </div>
-          <div onclick="openRoomModal('Lagoon Suite','₱8,200/night','2–6 persons','Spacious suite with lagoon access, living room.','static/images/Beach Front 2.jpg','Lagoon Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Lagoon Suite</h3>
-            <p class="text-gray-700 font-medium mb-1">₱8,200/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Lagoon access</li>
-              <li>Living room</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    {% elif resort == "crystalsplash-poolside-haven" %}
-      <section class="resort-section">
-        <div class="resort-image">
-          <img src="static/images/Resort 2.jpg" alt="CrystalSplash Poolside Haven">
-        </div>
-        <div class="resort-content">
-          <h2>{{ resort_names[resort] }}</h2>
-          <p>CrystalSplash offers elegant poolside relaxation, perfect for weekend family escapes.</p>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
-          <ul>
-            <li>Lap pool</li>
-            <li>Gazebos</li>
-            <li>Jacuzzi</li>
-            <li>Private suites</li>
-          </ul>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
-          <p>Nasugbu, Batangas</p>
-          <a href="bit.ly/4eijVVG" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
-        </div>
-      </section>
-      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div onclick="openRoomModal('Deluxe Room','₱6,000/night','2-3 persons','Modern room with pool access and breakfast.','static/images/Garden Type 3.jpg','Deluxe Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Deluxe Room</h3>
-            <p class="text-gray-700 font-medium mb-1">₱6,000/night</p>
-            <p class="text-sm text-gray-500 mb-1">2-3 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Pool access</li>
-              <li>Complimentary breakfast</li>
-            </ul>
-          </div>
-          <div onclick="openRoomModal('Infinity Suite','₱10,000/night','2–6 persons','Suite with infinity pool views, luxurious amenities.','static/images/Beach Front 3.jpg','Infinity Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Infinity Suite</h3>
-            <p class="text-gray-700 font-medium mb-1">₱10,000/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Infinity pool view</li>
-              <li>Luxury amenities</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    {% elif resort == "lagoon-cove-resort" %}
-      <section class="resort-section">
-        <div class="resort-image">
-          <img src="static/images/Resort 4.jpg" alt="Lagoon Cove Resort">
-        </div>
-        <div class="resort-content">
-          <h2>{{ resort_names[resort] }}</h2>
-          <p>A nature-inspired pool resort with a relaxing lagoon, perfect for unwinding and reunions.</p>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
-          <ul>
-            <li>Lagoon pool</li>
-            <li>BBQ pit</li>
-            <li>Wide lawn</li>
-            <li>Clubhouse</li>
-          </ul>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
-          <p>Tanauan, Batangas</p>
-          <a href="https://www.google.com/maps?q=Tanauan,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
-        </div>
-      </section>
-      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div onclick="openRoomModal('Superior Room','₱5,200/night','2–3 persons','Spacious room with pool or garden view, twin beds.','static/images/Garden Type 4.jpg','Superior Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Superior Room</h3>
-            <p class="text-gray-700 font-medium mb-1">₱5,200/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–3 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Twin beds</li>
-              <li>Pool/garden view</li>
-            </ul>
-          </div>
-          <div onclick="openRoomModal('Family Suite','₱8,800/night','4–6 persons','Large suite for families, 2 bedrooms, living area.','static/images/Beach Front 4.jpg','Family Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Family Suite</h3>
-            <p class="text-gray-700 font-medium mb-1">₱8,800/night</p>
-            <p class="text-sm text-gray-500 mb-1">4–6 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>2 Bedrooms</li>
-              <li>Living area</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    {% elif resort == "sunset-waters-pool-resort" %}
-      <section class="resort-section">
-        <div class="resort-image">
-          <img src="static/images/resort 3.jpg" alt="Sunset Waters Pool Resort">
-        </div>
-        <div class="resort-content">
-          <h2>{{ resort_names[resort] }}</h2>
-          <p>Enjoy beautiful sunset views and a relaxing pool experience at Sunset Waters Pool Resort.</p>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
-          <ul>
-            <li>Sunset deck</li>
-            <li>Adult and kiddie pools</li>
-            <li>Open cabanas</li>
-            <li>Bar & grill</li>
-          </ul>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
-          <p>Balayan, Batangas</p>
-          <a href="https://www.google.com/maps?q=Balayan,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
-        </div>
-      </section>
-      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div onclick="openRoomModal('Standard Room','₱4,800/night','2-3 persons','Comfortable room with twin beds, basic amenities.','static/images/Garden Type 5.jpg','Standard Room',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Standard Room</h3>
-            <p class="text-gray-700 font-medium mb-1">₱4,800/night</p>
-            <p class="text-sm text-gray-500 mb-1">2-3 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Twin beds</li>
-              <li>Air conditioning</li>
-            </ul>
-          </div>
-          <div onclick="openRoomModal('Deluxe Suite','₱7,200/night','2–6 persons','Spacious suite, sea view, king-sized bed.','static/images/Beach Front 5.jpg','Deluxe Suite',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Deluxe Suite</h3>
-            <p class="text-gray-700 font-medium mb-1">₱7,200/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Sea view</li>
-              <li>King-sized bed</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    {% elif resort == "coolsprings-private-resort" %}
-      <section class="resort-section">
-        <div class="resort-image">
-          <img src="static/images/Resort 6.jpg" alt="CoolSprings Private Resort">
-        </div>
-        <div class="resort-content">
-          <h2>{{ resort_names[resort] }}</h2>
-          <p>Experience exclusive privacy and cool spring water pools, ideal for private gatherings.</p>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
-          <ul>
-            <li>Private pool villas</li>
-            <li>Natural spring water</li>
-            <li>Conference room</li>
-            <li>Bonfire area</li>
-          </ul>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
-          <p>Sto. Tomas, Batangas</p>
-          <a href="https://www.google.com/maps?q=Sto.+Tomas,+Batangas" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
-          <h3 class="text-lg font-semibold mt-4 mb-2">Room Types:</h3>
-        </div>
-      </section>
-      <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
-        <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div onclick="openRoomModal('Sulu Terrace','₱9,000/night','2-3 persons','Rustic Filipino-inspired villa, garden view, queen-size bed.','static/images/Garden Type 6.jpg','Sulu Terrace',3)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Sulu Terrace</h3>
-            <p class="text-gray-700 font-medium mb-1">₱9,000/night</p>
-            <p class="text-sm text-gray-500 mb-1">2-3 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Garden view</li>
-              <li>Queen-size bed</li>
-            </ul>
-          </div>
-          <div onclick="openRoomModal('Narra Pool Villa','₱18,000/night','2–6 persons','Private villa with pool, luxurious amenities, forest view.','static/images/Beach Front 6.png','Narra Pool Villa',6)" class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
-            <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">Narra Pool Villa</h3>
-            <p class="text-gray-700 font-medium mb-1">₱18,000/night</p>
-            <p class="text-sm text-gray-500 mb-1">2–6 persons</p>
-            <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
-              <li>Private pool</li>
-              <li>Forest view</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    {% else %}
-      <div class="max-w-xl mx-auto mt-20 text-center text-2xl font-bold text-red-700">
-        Resort not found.
+  {% if resort_data %}
+    <section class="resort-section">
+      <div class="resort-image">
+        <img src="{{ resort_data.image_url }}" alt="{{ resort_data.name }}">
       </div>
-    {% endif %}
+      <div class="resort-content">
+        <h2>{{ resort_data.name }}</h2>
+        <p>{{ resort_data.description }}</p>
+        <h3 class="text-lg font-semibold mt-4 mb-2">Amenities:</h3>
+        <ul>
+          {% for amenity in resort_data.amenities %}
+            <li>{{ amenity }}</li>
+          {% endfor %}
+        </ul>
+        <h3 class="text-lg font-semibold mt-4 mb-2">Location:</h3>
+        <p>{{ resort_data.location }}</p>
+        <a href="{{ resort_data.google_maps_link }}" target="_blank" class="text-blue-600 underline">View on Google Maps</a>
+      </div>
+    </section>
+    
+    <section class="max-w-6xl mx-auto mt-8 bg-white p-10 rounded-lg shadow-lg">
+      <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+       {% for room in rooms %}
+        <div onclick="openRoomModal('{{ room.room_name }}','₱ {{room.price | int }}/night','{{ room.capacity_min }}–{{ room.capacity_max }} persons','{{ room.description|e }}','{{ room.image_url }}','{{ room.id }}', 3, '{{ resort_data.id}}')" 
+            class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
+          <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">{{ room.room_name }}</h3>
+          <p class="text-gray-700 font-medium mb-1">₱{{ '{:,.0f}'.format(room.price) }}/night</p>
+          <p class="text-sm text-gray-500 mb-1">{{ room.capacity_min }}–{{ room.capacity_max }} persons</p>
+          <ul class="text-sm text-gray-500 list-disc list-inside space-y-1">
+            {% for amenity in room.amenities %}
+              <li>{{ amenity }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+      </div>
+    </section>
+  {% else %}
+    <div class="max-w-xl mx-auto mt-20 text-center text-2xl font-bold text-red-700">
+      Resort not found.
+    </div>
+  {% endif %}
 
-      <!-- Room Details Modal -->
+  <!-- Room Details Modal -->
   <div id="roomModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative">
       <button onclick="closeRoomModal()" class="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-2xl font-bold">&times;</button>
@@ -370,7 +134,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Booking Dates</label>
-          <input type="text" id="dateRange" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>
+          <div id="datePickerContainer"></div>
         </div>
         <div class="relative">
           <label class="block text-sm font-medium text-gray-700 mb-1">Guests</label>
@@ -446,28 +210,54 @@
     </div>
   </section>
   <script>
-  let picker;
-  let disabledDates = []; 
-  fetch('/get-booked-dates')
-  .then(response => response.json())
-  .then(dates => {
-    disabledDates = dates;  // assign to global
+let disabledDates = {};  // { roomId: [disabledDateStr, ...] }
+let picker = null;
 
-    picker = new Litepicker({
-      element: document.getElementById('dateRange'),
-      singleMode: false,
-      format: 'YYYY-MM-DD',
-      minDate: new Date(),
-      disableDates: dates,  // use for picker config
-      setup: (pickerInstance) => {
-        pickerInstance.on('selected', (startDate, endDate) => {
-          console.log("Check-in:", startDate.format('YYYY-MM-DD'));
-          console.log("Check-out:", endDate.format('YYYY-MM-DD'));
-        });
-      }
-    });
+function initializeDatePicker(resortId, roomId) {
+  // If dates not yet loaded, fetch them
+  if (!disabledDates[roomId]) {
+    fetch('/get-booked-dates')
+      .then(response => response.json())
+      .then(data => {
+        disabledDates = data;
+
+        // Initialize picker after data arrives
+        createPicker(resortId, roomId);
+      })
+      .catch(err => console.error('Failed to fetch booked dates:', err));
+  } else {
+    // Already have data, just set picker
+    createPicker(roomId);
+  }
+}
+
+function createPicker(resortId, roomId) {
+  if (picker) {
+    picker.destroy();  // Remove previous instance
+  }
+  const lockDates = (disabledDates[resortId][roomId] || []).map(dateStr => new Date(dateStr));
+
+  picker = new Litepicker({
+    element: document.getElementById('dateRange'),
+    singleMode: false,
+    format: 'YYYY-MM-DD',
+    minDate: new Date(),
+    lockDays: lockDates || [],
+    setup: (pickerInstance) => {
+      pickerInstance.on('selected', (startDate, endDate) => {
+        bookingData.calendarState.checkin.selectedDate = startDate.format('YYYY-MM-DD');
+        bookingData.calendarState.checkout.selectedDate = endDate.format('YYYY-MM-DD');
+
+        updateSlotInfo();
+      });
+    }
   });
+}
+const today = new Date();
+const tomorrow = new Date();
+tomorrow.setDate(today.getDate() + 1);
 const bookingData = {
+  currentResortId: null,
   currentRoomId: null,
   currentRoomCapacity: null,
   currentCalendarType: null,
@@ -494,8 +284,8 @@ const bookingData = {
     'Narra Pool Villa':[]
   },
   calendarState: {
-    checkin: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: null },
-    checkout: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: null }
+    checkin: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: today   },
+    checkout: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: tomorrow }
   }
 };
 
@@ -526,7 +316,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // document.getElementById('checkoutDate').addEventListener('click', () => toggleCalendar('checkout'));
   updateSummary();
 });
-function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapacity=3) {
+function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapacity=3, resortId) {
+  bookingData.currentResortId = resortId;
   bookingData.currentRoomId = roomId;
   bookingData.currentRoomCapacity = parseInt((roomCapacity || '3').toString().replace(/\D/g, '')) || 3;
   document.getElementById('roomTitle').innerText = title;
@@ -555,13 +346,22 @@ function updateSlotInfo() {
 
   while (date < end) {
     const dateStr = date.toISOString().split('T')[0];
+
+    if (disabledDates[roomId] && disabledDates[roomId].includes(dateStr)) {
+      allAvailable = false;
+      minAvailable = 0;
+      break;
+    }
+
     const available = getAvailableRooms(roomId, dateStr);
     if (available <= 0) {
       allAvailable = false;
       minAvailable = 0;
       break;
     }
+
     if (available < minAvailable) minAvailable = available;
+
     date.setDate(date.getDate() + 1);
   }
 
@@ -590,6 +390,16 @@ function openModal() {
   // }
   document.getElementById('bookingModal').classList.remove('hidden');
   document.getElementById('bookingModal').classList.add('flex');
+
+  
+  // Insert a fresh date input each time to avoid duplicates
+  const container = document.getElementById('datePickerContainer');
+  container.innerHTML = '<input type="text" id="dateRange" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>';
+
+  // Initialize date picker for this room
+  initializeDatePicker(bookingData.currentResortId, bookingData.currentRoomId);
+
+  document.getElementById('bookingModal').classList.remove('hidden');
 }
 function closeModal(event) {
   event.stopPropagation();
@@ -714,9 +524,6 @@ function confirmBooking() {
     errorElement.classList.remove('hidden');
     return;
   }
-
-  // Validation: check if any date in range is disabled (booked)
-  const disabledDatesTimestamps = disabledDates.map(dateStr => new Date(dateStr).setHours(0,0,0,0));
 
   let date = new Date(checkinDate);
   const end = new Date(checkoutDate);
