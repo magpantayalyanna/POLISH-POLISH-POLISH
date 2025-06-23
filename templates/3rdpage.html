@@ -178,7 +178,7 @@
       </div>
 
       <div class="text-right mt-8">
-        <button class="confirm-booking-btn" onclick="confirmBooking()">Confirm Booking</button>
+        <button class="confirm-booking-btn" onclick="confirmBooking()" id="confirmBookingBtn">Confirm Booking</button>
       </div>
 
     </div>
@@ -238,28 +238,28 @@
     async function fetchRoomData() {
       try {
         const response = await fetch('/get-room-data');
-        let data = await response.json();
+        const data = await response.json();
         for (const roomId in data) {
           bookingData.roomSlots[roomId] = data[roomId].total_slots;
           bookingData.unavailableDates[roomId] = [];
           bookingData.rooms[roomId] = data[roomId];
           const res = await fetch(`/get-room-slots?room_id=${roomId}`);
-          data = await res.json();
+          const data2 = await res.json();
 
-          if (data.error) {
-            console.error(data.error);
+          if (data2.error) {
+            console.error(data2.error);
             return;
           }
 
           // Initialize roomSlotsPerDate for this room
           bookingData.roomSlotsPerDate[roomId] = {};
 
-          for (const [date, booked] of Object.entries(data.bookingsPerDay)) {
-            bookingData.roomSlotsPerDate[roomId][date] = data.totalSlots - booked;
+          for (const [date, booked] of Object.entries(data2.bookingsPerDay)) {
+            bookingData.roomSlotsPerDate[roomId][date] = data2.totalSlots - booked;
           }
 
           // Now trigger slot info update if dates are selected
-          updateSlotInfo();
+          //updateSlotInfo();
         }
         
         console.log('Loaded room slots:', bookingData.roomSlots);
@@ -403,7 +403,7 @@
 
       if (available === undefined) {
         // If no data for this date, treat it as fully booked (or you can assume full availability)
-        minAvailable = 5;
+        minAvailable = 0;
         break;
       }
 
@@ -413,8 +413,12 @@
 
     if (minAvailable === 0) {
       slotInfo.innerText = 'No available rooms for these dates.';
+      document.getElementById('confirmBookingBtn').disabled = true;
+
     } else {
       slotInfo.innerText = `${minAvailable} room${minAvailable !== 1 ? 's' : ''} available for these dates.`;
+      document.getElementById('confirmBookingBtn').disabled = false;
+
     }
   }
 
@@ -465,7 +469,8 @@
         roomPrice: roomPrice, 
         roomPriceNumber: roomPriceNumber,
         resort: resortName,
-        location: resortLocation
+        location: resortLocation,
+        numberOfRooms: rooms,
       });
       window.location.href = `finalbookingform.html?${params.toString()}`;
     }

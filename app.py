@@ -378,6 +378,7 @@ def finalbookingform():
     room = request.args.get('room', '')
     summary = request.args.get('summary', '')
     room_price_number = request.args.get('roomPriceNumber', '')
+    numberOfRooms = request.args.get('numberOfRooms', '1')
 
     return render_template(
         'finalbookingform.html',
@@ -388,6 +389,7 @@ def finalbookingform():
         room=room,
         summary=summary,
         roomPriceNumber=room_price_number,
+        numberOfRooms=numberOfRooms,
     )
 
 
@@ -405,6 +407,7 @@ def emailtemplate():
     nights = request.form.get('nights', '')
     room_type = request.form.get('room_type', '')
     guests = request.form.get('guests', '')
+    numberOfRooms = request.form.get('numberOfRooms', '1')
     special_requests = request.form.get('special_requests')
     if not special_requests:
         special_requests = f"Smoking: {smoking or 'None'}, Bed: {bed or 'None'}"
@@ -459,7 +462,8 @@ def emailtemplate():
         card_reference=card_reference,
         card_amount_paid=card_amount_paid,
         email=email,
-        phone=phone
+        phone=phone,
+        numberOfRooms=numberOfRooms
     )
 
 @app.route('/head_dashboard')
@@ -547,6 +551,7 @@ def confirm_booking():
     guest_last_name = request.form.get('guest_last_name', '')
     guest_email = request.form.get('email', '')
     guest_phone = request.form.get('phone', '')
+    num_rooms = request.form.get('numberOfRooms', 1)
 
     # Create booking
     booking = AdminBooking(
@@ -572,6 +577,7 @@ def confirm_booking():
         guest_last_name=guest_last_name,
         guest_email=guest_email,
         guest_phone=guest_phone,
+        num_rooms=num_rooms
     )
 
     db.session.add(booking)
@@ -598,38 +604,6 @@ def update_status(booking_id):
         flash('No status provided.', 'danger')
 
     return redirect(url_for('head_dashboard'))
-
-
-@app.route('/signup', methods=['POST'])
-def signup():
-    full_name = request.form['full_name']
-    email = request.form['email']
-    password = request.form['password']
-    contact_number = request.form['contact_number']
-
-    # Check if email is already registered
-    existing_user = User.query.filter_by(email=email).first()
-    if existing_user:
-        flash('Email already registered.', 'danger')
-        return redirect(url_for('login'))
-
-    # Hash password securely
-    hashed_password = generate_password_hash(password)
-
-    # Create new user record
-    new_user = User(
-        username=email,  # using email as username
-        password=hashed_password,
-        full_name=full_name,
-        email=email,
-        contact_number=contact_number
-    )
-
-    db.session.add(new_user)
-    db.session.commit()
-
-    flash('Signup successful, please login.', 'success')
-    return redirect(url_for('login'))
 
 @app.route('/get-room-data')
 def get_room_data():
@@ -689,6 +663,8 @@ def get_booked_dates():
         'total_slots': total_slots
     })
 
+from datetime import datetime, date, timedelta
+
 @app.route('/get-room-slots')
 def get_room_slots():
     room_id = request.args.get('room_id')
@@ -700,15 +676,14 @@ def get_room_slots():
         return jsonify({'error': 'Room not found'}), 404
 
     total_slots = room.total_slots
-
     bookings = AdminBooking.query.filter_by(room_id=room_id).all()
 
     bookings_per_day = {}
-    available_slots_per_day = {}
 
+    # Count bookings per day based on actual booking dates
     for booking in bookings:
-        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d')
-        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d')
+        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d').date()
+        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d').date()
         num_rooms = booking.num_rooms or 1
 
         while start < end:
@@ -716,16 +691,25 @@ def get_room_slots():
             bookings_per_day[date_str] = bookings_per_day.get(date_str, 0) + num_rooms
             start += timedelta(days=1)
 
-    # Calculate remaining slots per day
-    for date_str, booked in bookings_per_day.items():
+    # Now compute available slots per day for the next 1 year
+    available_slots_per_day = {}
+    today = date.today()
+    one_year_later = today + timedelta(days=365)
+    current_day = today
+
+    while current_day <= one_year_later:
+        date_str = current_day.strftime('%Y-%m-%d')
+        booked = bookings_per_day.get(date_str, 0)
         remaining = max(0, total_slots - booked)
         available_slots_per_day[date_str] = remaining
+        current_day += timedelta(days=1)
 
     return jsonify({
         'totalSlots': total_slots,
         'bookingsPerDay': bookings_per_day,
         'availableSlotsPerDay': available_slots_per_day
     })
+
 
 
 if __name__ == '__main__':

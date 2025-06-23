@@ -76,6 +76,7 @@
       <input type="hidden" name="payment_method" id="hiddenPaymentMethod">
       <input type="hidden" name="total_amount" id="hiddenTotalAmount">
       <input type="hidden" name="card_amount_paid" id="hiddenCardAmountPaid">
+      <input type="hidden" name="numberOfRooms" id="numberOfRooms">
 
       <!-- Mode of Payment -->
       <div class="mt-8">
@@ -318,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const roomPrice = getParam('roomPrice');
   const roomPriceNumber = parseInt(getParam('roomPriceNumber')) || 0;
   const location = getParam('location');
+  const numberOfRooms = getParam('numberOfRooms');
 
   // Update summary sidebar
   document.getElementById('summaryCheckin').innerHTML = `<strong>Check-in:</strong> ${formatDate(checkin)}`;
@@ -387,6 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('hiddenRoomType').value = room;
   document.getElementById('hiddenGuests').value = summary;
   document.getElementById('hiddenTotalAmount').value = totalPrice;
+  document.getElementById('numberOfRooms').value = numberOfRooms;
 
   // Expiry date auto-format MM/YY
   const expiryInput = document.getElementById('expiryDate');
