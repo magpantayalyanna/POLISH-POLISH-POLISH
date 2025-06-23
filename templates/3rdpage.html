@@ -215,7 +215,7 @@ let picker = null;
 
 function initializeDatePicker(resortId, roomId) {
   // If dates not yet loaded, fetch them
-  if (!disabledDates[roomId]) {
+  if (!disabledDates[resortId] || !disabledDates[resortId][roomId]) {
     fetch('/get-booked-dates')
       .then(response => response.json())
       .then(data => {
@@ -223,11 +223,13 @@ function initializeDatePicker(resortId, roomId) {
 
         // Initialize picker after data arrives
         createPicker(resortId, roomId);
+        updateSlotInfo();
       })
       .catch(err => console.error('Failed to fetch booked dates:', err));
   } else {
     // Already have data, just set picker
-    createPicker(roomId);
+    createPicker(resortId, roomId);
+    updateSlotInfo();
   }
 }
 
@@ -237,21 +239,25 @@ function createPicker(resortId, roomId) {
   }
   const lockDates = (disabledDates[resortId][roomId] || []).map(dateStr => new Date(dateStr));
 
-  picker = new Litepicker({
-    element: document.getElementById('dateRange'),
-    singleMode: false,
-    format: 'YYYY-MM-DD',
-    minDate: new Date(),
-    lockDays: lockDates || [],
-    setup: (pickerInstance) => {
-      pickerInstance.on('selected', (startDate, endDate) => {
-        bookingData.calendarState.checkin.selectedDate = startDate.format('YYYY-MM-DD');
-        bookingData.calendarState.checkout.selectedDate = endDate.format('YYYY-MM-DD');
+ const dateRangeElement = document.getElementById('dateRange');
 
-        updateSlotInfo();
-      });
-    }
-  });
+  if (dateRangeElement) {
+    picker = new Litepicker({
+      element: dateRangeElement,
+      singleMode: false,
+      format: 'YYYY-MM-DD',
+      minDate: new Date(),
+      lockDays: lockDates || [],
+      setup: (pickerInstance) => {
+        pickerInstance.on('selected', (startDate, endDate) => {
+          bookingData.calendarState.checkin.selectedDate = startDate.format('YYYY-MM-DD');
+          bookingData.calendarState.checkout.selectedDate = endDate.format('YYYY-MM-DD');
+
+          updateSlotInfo();
+        });
+      }
+    });
+  }
 }
 const today = new Date();
 const tomorrow = new Date();
@@ -316,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // document.getElementById('checkoutDate').addEventListener('click', () => toggleCalendar('checkout'));
   updateSummary();
 });
-function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapacity=3, resortId) {
+async function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapacity=3, resortId) {
   bookingData.currentResortId = resortId;
   bookingData.currentRoomId = roomId;
   bookingData.currentRoomCapacity = parseInt((roomCapacity || '3').toString().replace(/\D/g, '')) || 3;
@@ -325,10 +331,11 @@ function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapac
   document.getElementById('roomCapacity').innerText = capacity;
   document.getElementById('roomDesc').innerText = desc;
   document.getElementById('roomImage').src = imageUrl;
-  updateSlotInfo();
+  await initializeDatePicker(resortId, roomId);
   document.getElementById('roomModal').classList.remove('hidden');
 }
 function updateSlotInfo() {
+  const resortId = bookingData.currentResortId;
   const roomId = bookingData.currentRoomId;
   const checkinDate = bookingData.calendarState.checkin.selectedDate;
   const checkoutDate = bookingData.calendarState.checkout.selectedDate;
@@ -347,7 +354,7 @@ function updateSlotInfo() {
   while (date < end) {
     const dateStr = date.toISOString().split('T')[0];
 
-    if (disabledDates[roomId] && disabledDates[roomId].includes(dateStr)) {
+    if (disabledDates[resortId][roomId] && disabledDates[resortId][roomId].includes(dateStr)) {
       allAvailable = false;
       minAvailable = 0;
       break;
