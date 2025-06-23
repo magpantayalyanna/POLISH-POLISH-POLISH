@@ -277,7 +277,8 @@ def fetch_bookings(resort_name=None):
             'reference_number': booking.reference_number,
             'status': booking.status,
             'bank_number_last4': booking.bank_number_last4,
-            'card_holder_name': booking.card_holder_name,
+            'card_holder_name': booking.card_holder_name, 
+            'bank_reference_number': booking.bank_reference_number,
             'guest_phone': booking.guest_phone,
             'guest_email': booking.guest_email,
         })
@@ -993,6 +994,7 @@ def update_resort_booking(booking_id):
         if resort_key:
             return redirect(url_for('resort_dashboard', resort_key=resort_key))
     return redirect(url_for('head_dashboard'))
+
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    app.run(port=5001, debug=True)

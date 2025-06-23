@@ -73,6 +73,7 @@
       text-align: center;
     }
     .proof-form {
+      box-sizing: border-box;
       margin: 0 auto;
       max-width: 340px;
       padding: 22px 22px 10px 22px;
@@ -92,6 +93,7 @@
       font-size: 15px;
     }
     .proof-input {
+      box-sizing: border-box;
       font-size: 15px;
       padding: 8px 12px;
       border: 1.5px solid #e2e8f0;
@@ -218,7 +220,7 @@
           <span class="proof-label">Last 4 digits of card number:</span>
           <input type="text" id="card_last4" name="card_last4" maxlength="4" pattern="\d{4}" class="proof-input" required>
           <span class="proof-label">Reference Number / Transaction ID:</span>
-          <input type="text" id="card_reference" name="card_reference" maxlength="32" class="proof-input" required>
+          <input type="text" id="card_reference" name="card_reference" maxlength="13" class="proof-input" required>
       
           <!-- Hidden fields for booking data -->
           <input type="hidden" name="resort_name" value="{{ resort_name }}">
