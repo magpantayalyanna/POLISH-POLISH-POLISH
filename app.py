@@ -482,10 +482,11 @@ def head_dashboard():
             resort_rooms[key] = rooms
         else:
             resort_rooms[key] = []
-    
+    bookings = fetch_bookings()
     return render_template('head_dashboard.html', 
                          resort_rooms=resort_rooms,
-                         current_year=datetime.now().year)
+                         current_year=datetime.now().year,
+                         bookings=bookings) 
 
 @app.route('/update_room_slots', methods=['POST'])
 def update_room_slots():
