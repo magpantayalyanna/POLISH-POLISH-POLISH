@@ -570,12 +570,11 @@ def prepare_calendar_events(bookings):
                 "guest_email": booking.get('guest_email'),
                 "guest_phone": booking.get('guest_phone'),
                 "details":booking.get('guests'),
-                "num_rooms": booking.get('num_rooms'),
+                "room_type": booking.get('room_type'),
                 "payment_method": booking.get('payment_method'),
                 "total_amount": booking.get('total_amount'),
                 "special_requests": booking.get('special_requests'),
                 "reference_number": booking.get('reference_number'),
-                "notes": booking.get('notes')
             }
         })
     return events
