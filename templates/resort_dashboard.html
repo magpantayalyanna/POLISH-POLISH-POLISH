@@ -6,6 +6,10 @@
   <title>Way2GO Admin | {{ resort_name }} Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light.css">
+  <script src="https://unpkg.com/@popperjs/core@2"></script>
+  <script src="https://unpkg.com/tippy.js@6"></script>
+
   
   <style>
     :root {
@@ -275,9 +279,9 @@
       <input type="text" id="filterSearch" placeholder="Search by guest name..." />
       <select id="statusFilter">
         <option value="">All Statuses</option>
-        <option value="Pending">Pending</option>
-        <option value="Confirmed">Confirmed</option>
-        <option value="Cancelled">Cancelled</option>
+        <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="cancelled">Cancelled</option>
       </select>
     </div>
 
@@ -426,14 +430,39 @@ window.onload = function () {
     const calendarEl = document.getElementById('calendar');
     
     const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        height: 'auto',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,listWeek'
-        },
-        events: calendarEvents
+      initialView: 'dayGridMonth',
+      height: 'auto',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,listWeek'
+      },
+      events: calendarEvents,
+      eventDidMount: function(info) {
+        const props = info.event.extendedProps;
+
+        const tooltipContent = `
+          <div>
+            <strong>Guest:</strong> ${props.guest_name}<br>
+            <strong>Phone:</strong> ${props.guest_phone}<br>
+            <strong>Email:</strong> ${props.guest_email}<br>
+            <strong>Rooms:</strong> ${props.num_rooms}<br>
+            <strong>Details:</strong> ${props.details}<br>
+            <strong>Payment:</strong> ${props.payment_method}<br>
+            <strong>Total:</strong> ₱${props.total_amount}<br>
+            <strong>Reference:</strong> ${props.reference_number}<br>
+            <strong>Notes:</strong> ${props.notes || 'None'}
+          </div>
+        `;
+
+        // Attach Tippy tooltip
+        tippy(info.el, {
+          content: tooltipContent,
+          allowHTML: true,
+          theme: 'light',
+          interactive: true
+        });
+      }
     });
     
     calendar.render();

@@ -63,6 +63,7 @@ class AdminBooking(db.Model):
     card_holder_name = db.Column(db.String)
     bank_reference_number = db.Column(db.String)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.String)
 
     resort = db.relationship('Resort', backref=db.backref('bookings', lazy=True))
     room = db.relationship('Room', backref=db.backref('bookings', lazy=True))

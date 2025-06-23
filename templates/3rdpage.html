@@ -193,20 +193,14 @@
     <div class="mx-auto" style="max-width: 700px;">
       <h2 class="text-3xl font-bold text-[#2c3e50] mb-6" style="font-family:'Playfair Display',serif;">Recent Feedback</h2>
       {% if feedbacks and feedbacks|length > 0 %}
-        {% for fb in feedbacks %}
-          <div class="rounded-xl border border-gray-200 bg-[#fcfaf6] shadow p-8 mb-6 w-full text-center">
-            <div class="flex items-center justify-center mb-3 text-yellow-500 text-base" style="letter-spacing:2px;">
-            </div>
-            <p class="italic text-base mb-4 text-[#444]">"{{ fb.message }}"</p>
-            <div class="flex items-center justify-center mt-2">
-              <img src="https://randomuser.me/api/portraits/women/11.jpg" alt="User photo" class="w-12 h-12 rounded-full mr-3">
-              <div class="text-left">
-                <div class="font-semibold text-[#2c3e50]">Anonymous Person</div>
-                <div class="text-xs text-gray-500">{{ resort_names.get(fb.resort, fb.resort) }}</div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
+       {% for fb in feedbacks %}
+        <div class="rounded-xl ...">
+          <p class="italic text-base mb-4 text-[#444]">"{{ fb.message }}"</p>
+          ...
+          <div class="text-xs text-gray-500">{{ resort_data.get(fb.resort, fb.resort) }}</div>
+        </div>
+      {% endfor %}
+
       {% else %}
         <div class="text-center text-gray-500">No feedback yet for this resort.</div>
       {% endif %}
@@ -330,12 +324,27 @@
     });
 
     async function openRoomBookingModal(roomId, resortId) {
-      
+      localStorage.setItem('currentRoomId', roomId);
+      // Check if room is currently being booked by someone else
+      const checkStatus = await fetch(`/check_room_booking_status?room_id=${roomId}`)
+        .then(res => res.json());
+
+      if (!checkStatus.success) {
+        alert(`Error checking room status: ${checkStatus.message}`);
+        return;
+      }
+
+      if (checkStatus.is_booking === 1) {
+        alert("This room is currently being booked by another guest. Please try again later.");
+        return;
+      }
+
+      // Proceed opening the modal if available
       document.getElementById('guestButton').disabled = true;
       document.getElementById('guestSummary').innerHTML = "1 room, 1 adult, 0 children";
       const dropdown = document.getElementById('guestDropdown');
-      
       dropdown.classList.add('hidden');
+
       bookingData.currentRoomId = roomId;
       bookingData.currentResortId = resortId;
 
@@ -350,15 +359,11 @@
       // Fetch disabled dates + per-day availability
       await fetch(`/get-booked-dates?room_id=${roomId}`)
         .then(res => res.json())
-        .then(data => {
-          disabledDates = data;
-        });
+        .then(data => { disabledDates = data; });
 
       await fetch(`/get-room-slots?room_id=${roomId}`)
         .then(res => res.json())
-        .then(data => {
-          bookingData.roomSlotsPerDate = data;
-        });
+        .then(data => { bookingData.roomSlotsPerDate = data; });
 
       // Reset picker container
       const container = document.getElementById('datePickerContainer');
@@ -366,7 +371,26 @@
 
       createLitepicker(resortId, roomId);
       document.getElementById('roomBookingModal').classList.remove('hidden');
+
+      // Set is_booking to 1 to lock the room for this session
+      await fetch('/set_room_booking_status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          room_id: roomId,
+          status: 1
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          console.error(`Failed to set booking status: ${data.message}`);
+        }
+      });
     }
+
 
     function createLitepicker(resortId, roomId) {
       const lockDates = (disabledDates[resortId]?.[roomId] || []).map(d => new Date(d));
@@ -447,7 +471,7 @@
       processBooking(roomId, checkinDate, checkoutDate, numRooms);
     }
 
-    function processBooking(roomId, checkinDate, checkoutDate, rooms) {
+    async function processBooking(roomId, checkinDate, checkoutDate, rooms) {
       if (!bookingData.bookings[roomId]) bookingData.bookings[roomId] = {};
       let date = new Date(checkinDate);
       const end = new Date(checkoutDate);
@@ -468,7 +492,24 @@
         el => el.innerText.trim().toLowerCase().startsWith('location')
       );
       const resortLocation = locationLabel ? locationLabel.nextElementSibling.innerText.trim() : '';
-
+      
+      // Set is_booking to 1 to lock the room for this session
+      await fetch('/set_room_booking_status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          room_id: roomId,
+          status: 0
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          console.error(`Failed to set booking status: ${data.message}`);
+        }
+      });
       // ---- Redirect with params (only once) ----
       const params = new URLSearchParams({
         checkin: checkinDate,
@@ -483,7 +524,25 @@
       });
       window.location.href = `finalbookingform.html?${params.toString()}`;
     }
-    function closeRoomModal() {
+    async function closeRoomModal() {
+      let roomId = localStorage.getItem('currentRoomId');
+      // Set is_booking to 1 to lock the room for this session
+      await fetch('/set_room_booking_status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          room_id: roomId,
+          status: 0
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          console.error(`Failed to set booking status: ${data.message}`);
+        }
+      });
       document.getElementById('roomBookingModal').classList.add('hidden');
     }
     function toggleDropdown() {
