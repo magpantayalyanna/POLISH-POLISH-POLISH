@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, abort, json, render_template, request, redirect, url_for, flash, jsonify, session
 from datetime import date, datetime, timedelta
 import click
 import os
 from flask.cli import with_appcontext
+from markupsafe import Markup
 from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 
 from models.extensions import db
 from models.models import Resort, Feedback, Room, AdminBooking
@@ -471,37 +473,54 @@ def head_dashboard():
     bookings = fetch_bookings()
     return render_template('head_dashboard.html', bookings=bookings, current_year=datetime.now().year)
 
-@app.route('/aquavibe_dashboard.html')
-def aquavibe_dashboard():
-    bookings = fetch_bookings("AquaVibe Resort")
-    bookings = [dict(row) for row in bookings]
-    return render_template('aquavibe_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+def prepare_calendar_events(bookings):
+    """Helper function to prepare calendar events"""
+    events = []
+    for booking in bookings:
+        # Fix the status comparison - make it case-insensitive
+        status = booking.get('status', '').lower()
+        
+        if status == 'confirmed':
+            color = "#38a169"
+        elif status == 'pending':
+            color = "#ecc94b"
+        else:  # cancelled or any other status
+            color = "#e53e3e"
+            
+        events.append({
+            "title": f"{booking['guest_first_name']} {booking['guest_last_name']} ({booking['status']})",
+            "start": booking['checkin_date'],
+            "end": booking['checkout_date'],
+            "color": color
+        })
+    return events
 
-@app.route('/bluewave_dashboard.html')
-def bluewave_dashboard():
-    bookings = fetch_bookings("BlueWave Pool Resort")
-    return render_template('bluewave_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+# Define resort mapping
+RESORT_MAPPING = {
+    'bluewave': 'BlueWave Pool Resort',
+    'coolsprings': 'CoolSprings Private Resort',
+    'crystalsplash': 'CrystalSplash Poolside Haven',
+    'lagoon': 'Lagoon Cove Resort',
+    'sunset': 'Sunset Waters Pool Resort',
+    'aquavibe': 'AquaVibe Resort'
+}
 
-@app.route('/coolsprings_dashboard.html')
-def coolsprings_dashboard():
-    bookings = fetch_bookings("CoolSprings Private Resort")
-    return render_template('coolsprings_dashboard.html', bookings=bookings, current_year=datetime.now().year)
-
-@app.route('/crystalsplash_dashboard.html')
-def crystalsplash_dashboard():
-    bookings = fetch_bookings("CrystalSplash Poolside Haven")
-    return render_template('crystalsplash_dashboard.html', bookings=bookings, current_year=datetime.now().year)
-
-@app.route('/lagoon_dashboard.html')
-def lagoon_dashboard():
-    bookings = fetch_bookings("Lagoon Cove Resort")
-    return render_template('lagoon_dashboard.html', bookings=bookings, current_year=datetime.now().year)
-
-@app.route('/sunset_dashboard.html')
-def sunset_dashboard():
-    bookings = fetch_bookings("Sunset Waters Pool Resort")
-    return render_template('sunset_dashboard.html', bookings=bookings, current_year=datetime.now().year)
-
+@app.route('/<resort_key>_dashboard.html')
+def resort_dashboard(resort_key):
+    # Get the full resort name from the mapping
+    resort_name = RESORT_MAPPING.get(resort_key)
+    
+    if not resort_name:
+        abort(404)  # Resort not found
+    
+    bookings = fetch_bookings(resort_name)
+    events = prepare_calendar_events(bookings)
+    
+    return render_template('resort_dashboard.html', 
+                         bookings=bookings,
+                         resort_name=resort_name,
+                         calendar_events=json.dumps(events),
+                         current_year=datetime.now().year)
 
 @app.route('/feedback_dashboard')
 def feedbacks_dashboard():

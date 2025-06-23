@@ -393,48 +393,25 @@
                     </div>
                 </div>
                 <div class="quick-links">
-                    <a href="{{ url_for('aquavibe_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
+                    {% set resorts = [
+                        {'key': 'aquavibe', 'name': 'AquaVibe Resort', 'icon': 'fa-water'},
+                        {'key': 'bluewave', 'name': 'BlueWave Resort', 'icon': 'fa-water'},
+                        {'key': 'coolsprings', 'name': 'CoolSprings Resort', 'icon': 'fa-water'},
+                        {'key': 'crystalsplash', 'name': 'CrystalSplash Resort', 'icon': 'fa-water'},
+                        {'key': 'lagoon', 'name': 'Lagoon Cove Resort', 'icon': 'fa-water'},
+                        {'key': 'sunset', 'name': 'Sunset Waters Resort', 'icon': 'fa-sun'}
+                    ] %}
+                    
+                    {% for resort in resorts %}
+                    <a href="{{ url_for('resort_dashboard', resort_key=resort.key) }}" class="quick-link">
+                        <i class="fas {{ resort.icon }}"></i>
                         <div class="quick-link-content">
-                            <h3>AquaVibe Resort</h3>
-                            <p>View bookings and manage AquaVibe Resort</p>
+                            <h3>{{ resort.name }}</h3>
+                            <p>View bookings and manage {{ resort.name }}</p>
                         </div>
                     </a>
-                    <a href="{{ url_for('bluewave_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>BlueWave Resort</h3>
-                            <p>View bookings and manage BlueWave Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('coolsprings_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>CoolSprings Resort</h3>
-                            <p>View bookings and manage CoolSprings Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('crystalsplash_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>CrystalSplash Resort</h3>
-                            <p>View bookings and manage CrystalSplash Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('lagoon_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>Lagoon Cove Resort</h3>
-                            <p>View bookings and manage Lagoon Cove Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('sunset_dashboard') }}" class="quick-link">
-                        <i class="fas fa-sun"></i>
-                        <div class="quick-link-content">
-                            <h3>Sunset Waters Resort</h3>
-                            <p>View bookings and manage Sunset Waters Resort</p>
-                        </div>
-                    </a>
+                    {% endfor %}
+                    
                     <a href="{{ url_for('feedbacks_dashboard') }}" class="quick-link feedback-link-center">
                         <i class="fas fa-comments"></i>
                         <div class="quick-link-content">

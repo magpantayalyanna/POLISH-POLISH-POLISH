@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Way2GO Admin | CoolSprings Private Resort Dashboard</title>
+  <title>Way2GO Admin | {{ resort_name }} Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.14/index.global.min.js"></script>
+  
   <style>
     :root {
       --primary: #003f5c;
@@ -139,8 +141,8 @@
       z-index: 1000;
       width: 90%;
       max-width: 400px;
-      max-height: 90vh; /* important for scroll */
-      overflow-y: auto;  /* enable vertical scrolling */
+      max-height: 90vh;
+      overflow-y: auto;
     }
     #editModal h3 { margin-bottom: 16px; color: var(--accent); }
     #editModal label {
@@ -172,14 +174,14 @@
 </head>
 <body>
   <header>
-    <h1>CoolSprings Private Resort Admin</h1>
+    <h1>{{ resort_name }} Admin</h1>
     <nav>
       <a href="{{ url_for('head_dashboard') }}" class="back-btn">Back to Dashboard</a>
     </nav>
   </header>
 
   <main>
-    <h2>CoolSprings Bookings</h2>
+    <h2>{{ resort_name }} Bookings</h2>
 
     <div class="dashboard-stats">
       <div class="stat-card"><h3>Total</h3><p id="totalCount">0</p></div>
@@ -197,6 +199,9 @@
         <option value="Cancelled">Cancelled</option>
       </select>
     </div>
+
+    <h2>Booking Calendar</h2>
+    <div id="calendar" style="background:white; padding:20px; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.05); margin-bottom:30px;"></div>
 
     {% if bookings %}
     <table id="bookingsTable">
@@ -302,7 +307,7 @@
   </main>
 
   <footer>
-    &copy; 2025 Way2GO Admin - CoolSprings. All rights reserved.
+    &copy; {{ current_year }} Way2GO Admin - {{ resort_name }}. All rights reserved.
   </footer>
 
   <div id="editModal">
@@ -327,64 +332,82 @@
     </form>
   </div>
 
-  <script>
-  window.onload = function () {
+<script>
+window.onload = function () {
+    const calendarEvents = '{{ calendar_events|safe }}' ? JSON.parse('{{ calendar_events|safe }}') : [];
+    
+    const calendarEl = document.getElementById('calendar');
+    
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,listWeek'
+        },
+        events: calendarEvents
+    });
+    
+    calendar.render();
+    
     const rows = document.querySelectorAll("#bookingsTable tbody tr");
     const statusFilter = document.getElementById("statusFilter");
     const searchInput = document.getElementById("filterSearch");
 
     let total = 0, confirmed = 0, pending = 0, cancelled = 0;
     rows.forEach(row => {
-      total++;
-      const status = row.dataset.status;
-      if (status === 'Confirmed') confirmed++;
-      else if (status === 'Pending') pending++;
-      else if (status === 'Cancelled') cancelled++;
+        total++;
+        const status = row.dataset.status;
+        if (status === 'Confirmed') confirmed++;
+        else if (status === 'Pending') pending++;
+        else if (status === 'Cancelled') cancelled++;
     });
+    
     document.getElementById("totalCount").textContent = total;
     document.getElementById("confirmedCount").textContent = confirmed;
     document.getElementById("pendingCount").textContent = pending;
     document.getElementById("cancelledCount").textContent = cancelled;
 
     function applyFilters() {
-      const searchVal = searchInput.value.toLowerCase();
-      const statusVal = statusFilter.value;
-      rows.forEach(row => {
-        const guest = row.dataset.guest?.toLowerCase() || "";
-        const status = row.dataset.status || "";
-        const matchesSearch = !searchVal || guest.includes(searchVal);
-        const matchesStatus = !statusVal || status === statusVal;
-        row.style.display = matchesSearch && matchesStatus ? "" : "none";
-      });
+        const searchVal = searchInput.value.toLowerCase();
+        const statusVal = statusFilter.value;
+        rows.forEach(row => {
+            const guest = row.dataset.guest?.toLowerCase() || "";
+            const status = row.dataset.status || "";
+            const matchesSearch = !searchVal || guest.includes(searchVal);
+            const matchesStatus = !statusVal || status === statusVal;
+            row.style.display = matchesSearch && matchesStatus ? "" : "none";
+        });
     }
 
     [searchInput, statusFilter].forEach(input => {
-      input.addEventListener("input", applyFilters);
-      input.addEventListener("change", applyFilters);
+        input.addEventListener("input", applyFilters);
+        input.addEventListener("change", applyFilters);
     });
 
     document.querySelectorAll('.edit-btn').forEach(btn => {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        const booking = JSON.parse(this.dataset.booking);
-        document.getElementById('edit-id').value = booking.id;
-        document.getElementById('edit-firstname').value = booking.guest_first_name;
-        document.getElementById('edit-lastname').value = booking.guest_last_name;
-        document.getElementById('edit-roomtype').value = booking.room_type;
-        document.getElementById('edit-status').value = booking.status;
-        document.getElementById('edit-checkin').value = booking.checkin_date;
-        document.getElementById('edit-checkout').value = booking.checkout_date;
-        document.getElementById('edit-guests').value = booking.guests;
-        document.getElementById('editModal').style.display = 'block';
-        document.body.style.overflow = 'hidden';
-      });
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const booking = JSON.parse(this.dataset.booking);
+            document.getElementById('edit-id').value = booking.id;
+            document.getElementById('edit-firstname').value = booking.guest_first_name;
+            document.getElementById('edit-lastname').value = booking.guest_last_name;
+            document.getElementById('edit-roomtype').value = booking.room_type;
+            document.getElementById('edit-status').value = booking.status;
+            document.getElementById('edit-checkin').value = booking.checkin_date;
+            document.getElementById('edit-checkout').value = booking.checkout_date;
+            document.getElementById('edit-guests').value = booking.guests;
+            document.getElementById('editModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        });
     });
-  };
+};
 
-  function closeModal() {
+function closeModal() {
     document.getElementById('editModal').style.display = 'none';
     document.body.style.overflow = '';
-  }
-  </script>
+}
+</script>
 </body>
 </html>
