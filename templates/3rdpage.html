@@ -6,6 +6,8 @@
   <title>Way2GO | Resort Details</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Open+Sans&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/litepicker.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
   <style>
     :root {
       --main-color: #2c3e50;
@@ -367,42 +369,8 @@
       <div id="bookingError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
-          <div class="relative">
-            <input type="text" id="checkinDate" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>
-            <div id="checkinCalendar" class="calendar-container">
-              <div class="calendar-header">
-                <span class="calendar-nav" onclick="changeMonth('checkin', -1)">❮</span>
-                <span class="calendar-title" id="checkinMonthYear">Month Year</span>
-                <span class="calendar-nav" onclick="changeMonth('checkin', 1)">❯</span>
-              </div>
-              <div class="calendar-grid" id="checkinDayHeaders"></div>
-              <div class="calendar-grid" id="checkinDays"></div>
-              <div class="calendar-footer">
-                <button onclick="clearSelection('checkin')">Clear</button>
-                <button onclick="selectToday('checkin')">Today</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
-          <div class="relative">
-            <input type="text" id="checkoutDate" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>
-            <div id="checkoutCalendar" class="calendar-container">
-              <div class="calendar-header">
-                <span class="calendar-nav" onclick="changeMonth('checkout', -1)">❮</span>
-                <span class="calendar-title" id="checkoutMonthYear">Month Year</span>
-                <span class="calendar-nav" onclick="changeMonth('checkout', 1)">❯</span>
-              </div>
-              <div class="calendar-grid" id="checkoutDayHeaders"></div>
-              <div class="calendar-grid" id="checkoutDays"></div>
-              <div class="calendar-footer">
-                <button onclick="clearSelection('checkout')">Clear</button>
-                <button onclick="selectToday('checkout')">Today</button>
-              </div>
-            </div>
-          </div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Booking Dates</label>
+          <input type="text" id="dateRange" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>
         </div>
         <div class="relative">
           <label class="block text-sm font-medium text-gray-700 mb-1">Guests</label>
@@ -478,6 +446,27 @@
     </div>
   </section>
   <script>
+  let picker;
+  let disabledDates = []; 
+  fetch('/get-booked-dates')
+  .then(response => response.json())
+  .then(dates => {
+    disabledDates = dates;  // assign to global
+
+    picker = new Litepicker({
+      element: document.getElementById('dateRange'),
+      singleMode: false,
+      format: 'YYYY-MM-DD',
+      minDate: new Date(),
+      disableDates: dates,  // use for picker config
+      setup: (pickerInstance) => {
+        pickerInstance.on('selected', (startDate, endDate) => {
+          console.log("Check-in:", startDate.format('YYYY-MM-DD'));
+          console.log("Check-out:", endDate.format('YYYY-MM-DD'));
+        });
+      }
+    });
+  });
 const bookingData = {
   currentRoomId: null,
   currentRoomCapacity: null,
@@ -521,20 +510,20 @@ function isFullyBookedOn(roomId, dateStr) {
   return getAvailableRooms(roomId, dateStr) <= 0;
 }
 document.addEventListener('DOMContentLoaded', function() {
-  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  dayNames.forEach(day => {
-    const dayElement = document.createElement('div');
-    dayElement.className = 'calendar-day-header';
-    dayElement.textContent = day;
-    document.getElementById('checkinDayHeaders').appendChild(dayElement);
-    document.getElementById('checkoutDayHeaders').appendChild(dayElement.cloneNode(true));
-  });
+  // const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  // dayNames.forEach(day => {
+  //   const dayElement = document.createElement('div');
+  //   dayElement.className = 'calendar-day-header';
+  //   dayElement.textContent = day;
+  //   document.getElementById('checkinDayHeaders').appendChild(dayElement);
+  //   document.getElementById('checkoutDayHeaders').appendChild(dayElement.cloneNode(true));
+  // });
 
-  renderCalendar('checkin');
-  renderCalendar('checkout');
+  // renderCalendar('checkin');
+  // renderCalendar('checkout');
 
-  document.getElementById('checkinDate').addEventListener('click', () => toggleCalendar('checkin'));
-  document.getElementById('checkoutDate').addEventListener('click', () => toggleCalendar('checkout'));
+  // document.getElementById('checkinDate').addEventListener('click', () => toggleCalendar('checkin'));
+  // document.getElementById('checkoutDate').addEventListener('click', () => toggleCalendar('checkout'));
   updateSummary();
 });
 function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapacity=3) {
@@ -593,12 +582,12 @@ function closeRoomModal() {
 }
 function openModal() {
   document.getElementById('bookingError').classList.add('hidden');
-  if (!bookingData.calendarState.checkin.selectedDate) selectToday('checkin');
-  if (!bookingData.calendarState.checkout.selectedDate) {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    selectDate('checkout', tomorrow);
-  }
+  // if (!bookingData.calendarState.checkin.selectedDate) selectToday('checkin');
+  // if (!bookingData.calendarState.checkout.selectedDate) {
+  //   const tomorrow = new Date();
+  //   tomorrow.setDate(tomorrow.getDate() + 1);
+  //   selectDate('checkout', tomorrow);
+  // }
   document.getElementById('bookingModal').classList.remove('hidden');
   document.getElementById('bookingModal').classList.add('flex');
 }
@@ -694,44 +683,59 @@ function updateSummary() {
 }
 function confirmBooking() {
   const roomId = bookingData.currentRoomId;
-  const checkinDate = bookingData.calendarState.checkin.selectedDate;
-  const checkoutDate = bookingData.calendarState.checkout.selectedDate;
+  const checkinDate = picker.getStartDate();
+  const checkoutDate = picker.getEndDate();
   const rooms = parseInt(document.getElementById('room').innerText);
   const adults = parseInt(document.getElementById('adult').innerText);
   const children = parseInt(document.getElementById('child').innerText);
   const totalGuests = adults + children;
   const errorElement = document.getElementById('bookingError');
 
+  // Validation: dates selected
   if (!checkinDate || !checkoutDate) {
-    errorElement.textContent = 'Please select check-in and check-out dates';
+    errorElement.textContent = 'Please select both check-in and check-out dates';
     errorElement.classList.remove('hidden');
     return;
   }
-  if (checkoutDate <= checkinDate) {
+
+  // Validation: check-out after check-in
+  const checkinDateValue = new Date(checkinDate).setHours(0,0,0,0);
+  const checkoutDateValue = new Date(checkoutDate).setHours(0,0,0,0);
+
+  if (checkoutDateValue <= checkinDateValue) {
     errorElement.textContent = 'Check-out date must be after check-in date';
     errorElement.classList.remove('hidden');
     return;
   }
-  // Check if total guests exceed room capacity
+
+  // Validation: guest capacity
   if (totalGuests > (bookingData.currentRoomCapacity * rooms)) {
     errorElement.textContent = `Total guests (${totalGuests}) exceed room capacity (max ${bookingData.currentRoomCapacity * rooms} for ${rooms} room(s))`;
     errorElement.classList.remove('hidden');
     return;
   }
+
+  // Validation: check if any date in range is disabled (booked)
+  const disabledDatesTimestamps = disabledDates.map(dateStr => new Date(dateStr).setHours(0,0,0,0));
+
   let date = new Date(checkinDate);
   const end = new Date(checkoutDate);
+
   while (date < end) {
-    const dateStr = date.toISOString().split('T')[0];
-    const available = getAvailableRooms(roomId, dateStr);
-    if (available < rooms) {
-      errorElement.textContent = `Not enough availability for ${dateStr}. Only ${available} room(s) available.`;
+    const dateWithoutTime = date.setHours(0,0,0,0);
+    if (disabledDates.includes(dateWithoutTime)) {
+      const dateStr = new Date(dateWithoutTime).toISOString().split('T')[0];
+      errorElement.textContent = `Selected date ${dateStr} is already fully booked. Please choose a different date.`;
       errorElement.classList.remove('hidden');
       return;
     }
     date.setDate(date.getDate() + 1);
   }
-  processBooking(roomId, checkinDate, checkoutDate, rooms);
+
+  // If all validations pass — proceed to booking
+  processBooking(roomId, checkinDate.format('YYYY-MM-DD'), checkoutDate.format('YYYY-MM-DD'), rooms);
 }
+
 function processBooking(roomId, checkinDate, checkoutDate, rooms) {
   if (!bookingData.bookings[roomId]) bookingData.bookings[roomId] = {};
   let date = new Date(checkinDate);
@@ -789,52 +793,52 @@ function changeMonth(type, offset) {
   }
   renderCalendar(type);
 }
-function renderCalendar(type) {
-  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  const state = bookingData.calendarState[type];
-  const firstDay = new Date(state.currentYear, state.currentMonth, 1);
-  const startingDay = firstDay.getDay();
-  const daysInMonth = new Date(state.currentYear, state.currentMonth + 1, 0).getDate();
-  document.getElementById(`${type}MonthYear`).textContent = `${monthNames[state.currentMonth]} ${state.currentYear}`;
-  const daysContainer = document.getElementById(`${type}Days`);
-  daysContainer.innerHTML = '';
-  for (let i = 0; i < startingDay; i++) daysContainer.appendChild(document.createElement('div'));
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(state.currentYear, state.currentMonth, day);
-    const dateStr = date.toISOString().split('T')[0];
-    const dayElement = document.createElement('div');
-    dayElement.className = 'calendar-day';
-    dayElement.textContent = day;
-    if (date < today) {
-      dayElement.classList.add('disabled');
-    } else if (isFullyBookedOn(bookingData.currentRoomId, dateStr)) {
-      dayElement.classList.add('fully-booked');
-      dayElement.title = 'Fully booked';
-    } else {
-      dayElement.addEventListener('click', () => selectDate(type, date));
-    }
-    if (state.selectedDate && date.getDate() === state.selectedDate.getDate() &&
-        date.getMonth() === state.selectedDate.getMonth() && date.getFullYear() === state.selectedDate.getFullYear()) {
-      dayElement.classList.add('selected');
-    }
-    daysContainer.appendChild(dayElement);
-  }
-}
-function selectDate(type, date) {
-  bookingData.calendarState[type].selectedDate = date;
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  document.getElementById(`${type}Date`).value = `${month}/${day}/${date.getFullYear()}`;
-  document.getElementById(`${type}Calendar`).classList.remove('show');
-  if (type === 'checkin' && bookingData.calendarState.checkout.selectedDate && date > bookingData.calendarState.checkout.selectedDate) {
-    const nextDay = new Date(date);
-    nextDay.setDate(date.getDate() + 1);
-    selectDate('checkout', nextDay);
-  }
-  updateSlotInfo();
-}
+// function renderCalendar(type) {
+//   const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+//   const state = bookingData.calendarState[type];
+//   const firstDay = new Date(state.currentYear, state.currentMonth, 1);
+//   const startingDay = firstDay.getDay();
+//   const daysInMonth = new Date(state.currentYear, state.currentMonth + 1, 0).getDate();
+//   document.getElementById(`${type}MonthYear`).textContent = `${monthNames[state.currentMonth]} ${state.currentYear}`;
+//   const daysContainer = document.getElementById(`${type}Days`);
+//   daysContainer.innerHTML = '';
+//   for (let i = 0; i < startingDay; i++) daysContainer.appendChild(document.createElement('div'));
+//   const today = new Date();
+//   today.setHours(0, 0, 0, 0);
+//   for (let day = 1; day <= daysInMonth; day++) {
+//     const date = new Date(state.currentYear, state.currentMonth, day);
+//     const dateStr = date.toISOString().split('T')[0];
+//     const dayElement = document.createElement('div');
+//     dayElement.className = 'calendar-day';
+//     dayElement.textContent = day;
+//     if (date < today) {
+//       dayElement.classList.add('disabled');
+//     } else if (isFullyBookedOn(bookingData.currentRoomId, dateStr)) {
+//       dayElement.classList.add('fully-booked');
+//       dayElement.title = 'Fully booked';
+//     } else {
+//       dayElement.addEventListener('click', () => selectDate(type, date));
+//     }
+//     if (state.selectedDate && date.getDate() === state.selectedDate.getDate() &&
+//         date.getMonth() === state.selectedDate.getMonth() && date.getFullYear() === state.selectedDate.getFullYear()) {
+//       dayElement.classList.add('selected');
+//     }
+//     daysContainer.appendChild(dayElement);
+//   }
+// }
+// function selectDate(type, date) {
+//   bookingData.calendarState[type].selectedDate = date;
+//   const day = date.getDate().toString().padStart(2, '0');
+//   const month = (date.getMonth() + 1).toString().padStart(2, '0');
+//   document.getElementById(`${type}Date`).value = `${month}/${day}/${date.getFullYear()}`;
+//   document.getElementById(`${type}Calendar`).classList.remove('show');
+//   if (type === 'checkin' && bookingData.calendarState.checkout.selectedDate && date > bookingData.calendarState.checkout.selectedDate) {
+//     const nextDay = new Date(date);
+//     nextDay.setDate(date.getDate() + 1);
+//     selectDate('checkout', nextDay);
+//   }
+//   updateSlotInfo();
+// }
 function selectToday(type) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -857,8 +861,8 @@ window.addEventListener('click', function(e) {
   const checkoutCalendar = document.getElementById('checkoutCalendar');
   const checkinInput = document.getElementById('checkinDate');
   const checkoutInput = document.getElementById('checkoutDate');
-  if (!checkinCalendar.contains(e.target) && !checkinInput.contains(e.target)) checkinCalendar.classList.remove('show');
-  if (!checkoutCalendar.contains(e.target) && !checkoutInput.contains(e.target)) checkoutCalendar.classList.remove('show');
+  // if (!checkinCalendar.contains(e.target) && !checkinInput.contains(e.target)) checkinCalendar.classList.remove('show');
+  // if (!checkoutCalendar.contains(e.target) && !checkoutInput.contains(e.target)) checkoutCalendar.classList.remove('show');
 });
 </script>
 </body>

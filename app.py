@@ -1,157 +1,86 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
-from datetime import datetime
-import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from datetime import datetime, timedelta
+import click
 import os
 from flask.cli import with_appcontext
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from models.extensions import db
+from models.models import Resort, Feedback, User, AdminBooking, TempBooking
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Needed for flash messages!
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///admin_bookings.db'
+app.secret_key = "your_secret_key"
+
+db.init_app(app)
 
 feedbacks = []
 
-@app.cli.command("init-db")
+@click.command("init-db")
 @with_appcontext
 def init_db():
-    # BOOKINGS DB
-    conn = sqlite3.connect('admin_bookings.db')
-    cursor = conn.cursor()
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS admin_bookings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resort_name TEXT,
-            user_id integer,
-            checkin_date TEXT,
-            checkin_time TEXT,
-            checkout_date TEXT,
-            checkout_time TEXT,
-            nights INTEGER,
-            room_type TEXT,
-            guests INTEGER,
-            special_requests TEXT,
-            payment_method TEXT,
-            total_amount REAL,
-            downpayment REAL,
-            remaining_balance REAL,
-            status TEXT,
-            qr_path TEXT,
-            reference_number TEXT,
-            bank_number_last4 TEXT,
-            card_holder_name TEXT,
-            bank_reference_number TEXT,
-            created_at TEXT
-        )
-    ''')
-    # TEMP BOOKINGS TABLE — for pending booking attempts
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS temp_bookings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resort_name TEXT,
-            checkin_date TEXT,
-            checkin_time TEXT,
-            checkout_date TEXT,
-            checkout_time TEXT,
-            user_id integer
-        )
-    ''')
-    # USERS TABLE
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL,
-            full_name TEXT,
-            email TEXT UNIQUE,
-            contact_number TEXT
-        )
-    ''')
-    # RESORTS TABLE
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS resorts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            slug TEXT NOT NULL UNIQUE,        -- e.g. 'aquavibe-resort'
-            name TEXT NOT NULL,               -- e.g. 'AquaVibe Resort'
-            image_url TEXT,                   -- relative path to image
-            is_pet_friendly INTEGER DEFAULT 0, -- 1 for pet friendly, 0 otherwise
-            description TEXT
-        )
-    ''')
-    resorts = [
-    ("aquavibe-resort", "AquaVibe Resort", "static/images/Resort 1.jpg", 0, "Elegant pool resort with serene views."),
-    ("crystalsplash-poolside-haven", "CrystalSplash Poolside Haven", "static/images/Resort 2.jpg", 0, "Modern poolside haven perfect for families."),
-    ("sunset-waters-pool-resort", "Sunset Waters Pool Resort", "static/images/Resort 3.jpg", 0, "Experience unforgettable sunset swims."),
-    ("bluewave-pool-resort", "BlueWave Pool Resort", "static/images/Resort 10.jpg", 1, "Pet-friendly resort with spacious pools."),
-    ("lagoon-cove-resort", "Lagoon Cove Resort", "static/images/Resort 4.jpg", 1, "Relax in lush, pet-welcoming surroundings."),
-    ("coolsprings-private-resort", "CoolSprings Private Resort", "static/images/Resort 6.jpg", 1, "Exclusive, pet-friendly private pools.")
+    db.create_all()
+    
+    resorts_data = [
+        {"slug": "aquavibe-resort", "name": "AquaVibe Resort", "image_url": "static/images/Resort 1.jpg", "is_pet_friendly": False, "description": "Elegant pool resort with serene views."},
+        {"slug": "crystalsplash-poolside-haven", "name": "CrystalSplash Poolside Haven", "image_url": "static/images/Resort 2.jpg", "is_pet_friendly": False, "description": "Modern poolside haven perfect for families."},
+        {"slug": "sunset-waters-pool-resort", "name": "Sunset Waters Pool Resort", "image_url": "static/images/Resort 3.jpg", "is_pet_friendly": False, "description": "Experience unforgettable sunset swims."},
+        {"slug": "bluewave-pool-resort", "name": "BlueWave Pool Resort", "image_url": "static/images/Resort 10.jpg", "is_pet_friendly": True, "description": "Pet-friendly resort with spacious pools."},
+        {"slug": "lagoon-cove-resort", "name": "Lagoon Cove Resort", "image_url": "static/images/Resort 4.jpg", "is_pet_friendly": True, "description": "Relax in lush, pet-welcoming surroundings."},
+        {"slug": "coolsprings-private-resort", "name": "CoolSprings Private Resort", "image_url": "static/images/Resort 6.jpg", "is_pet_friendly": True, "description": "Exclusive, pet-friendly private pools."}
     ]
 
-    cursor.executemany('''
-        INSERT OR IGNORE INTO resorts (slug, name, image_url, is_pet_friendly, description)
-        VALUES (?, ?, ?, ?, ?)
-    ''', resorts)
-    conn.commit()
-    conn.close()
+    for resort_data in resorts_data:
+        existing_resort = Resort.query.filter_by(slug=resort_data['slug']).first()
+        if not existing_resort:
+            new_resort = Resort(**resort_data)
+            db.session.add(new_resort)
 
-    # FEEDBACK DB
-    # Now create feedback.db if not exists and table
-    conn_fb = sqlite3.connect('feedback.db')
-    conn_fb.execute('''
-        CREATE TABLE IF NOT EXISTS feedback (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resort_name TEXT NOT NULL,
-            message TEXT NOT NULL
-        )
-    ''')
-    conn_fb.commit()
-    conn_fb.close()
+    db.session.commit()
 
-def get_db_connection():
-    conn = sqlite3.connect('admin_bookings.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    click.echo("Database initialized successfully with resorts populated.")
 
-def get_feedback_db_connection():
-    conn = sqlite3.connect('feedback.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+app.cli.add_command(init_db)
 
 def fetch_bookings(resort_name=None):
-    conn = get_db_connection()
-    sql = "SELECT * FROM admin_bookings"
-    params = ()
+    query = AdminBooking.query
     if resort_name:
-        sql += " WHERE resort_name = ?"
-        params = (resort_name,)
-    sql += " ORDER BY created_at DESC"
-    bookings = conn.execute(sql, params).fetchall()
-    conn.close()
+        query = query.filter_by(resort_name=resort_name)
+    bookings = query.order_by(AdminBooking.created_at.desc()).all()
     return bookings
 
 def get_all_feedbacks():
-    conn = get_feedback_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT resort_name, message FROM feedback ORDER BY id DESC")
-    rows = cur.fetchall()
-    conn.close()
-    return rows
+    feedbacks = Feedback.query.order_by(Feedback.id.desc()).all()
+    return feedbacks
 
-@app.route('/')
-def homepage():
+@app.route('/', endpoint='homepage')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
     return render_template('index.html')
+
 
 @app.route('/submit_feedback', methods=['POST'])
 def submit_feedback():
-    resort = request.form.get('resort')
+    resort_id = request.form.get('resort')
     message = request.form.get('message')
-    if resort and message:
-        conn = get_feedback_db_connection()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO feedback (resort_name, message) VALUES (?, ?)", (resort, message))
-        conn.commit()
-        conn.close()
+
+    if resort_id and message:
+        # Check if the resort exists
+        resort = Resort.query.get(resort_id)
+        if not resort:
+            flash("Selected resort does not exist.", "danger")
+            return redirect(url_for('homepage'))
+
+        # Save feedback
+        feedback = Feedback(resort_id=resort_id, message=message)
+        db.session.add(feedback)
+        db.session.commit()
+
         flash("Thank you for your feedback!", "success")
     else:
         flash("Please select a resort and enter your feedback.", "danger")
+
     return redirect(url_for('homepage'))
 
 @app.route('/2ndpage')
@@ -160,14 +89,7 @@ def explore():
 
 @app.route('/resorts')
 def show_resorts():
-    conn = sqlite3.connect('admin_bookings.db')
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT slug, name, image_url, is_pet_friendly, description FROM resorts")
-    resorts = cursor.fetchall()
-
-    conn.close()
-
+    resorts = Resort.query.all()  # fetch all resorts via ORM
     return render_template('2ndpage.html', resorts=resorts)
 
 @app.route('/resort-details')
@@ -183,8 +105,17 @@ def resort_details():
             feedbacks.append({'resort': fb['resort_name'], 'message': fb['message']})
     return render_template('3rdpage.html', resort=resort, feedbacks=feedbacks)
 
+def get_current_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return None  # Or redirect to login / handle anonymous users
+    
+    user = User.query.get(user_id)
+    return user
+
 @app.route('/finalbookingform.html')
 def finalbookingform():
+    # Booking info from URL params
     resort = request.args.get('resort', '')
     checkin = request.args.get('checkin', '')
     checkout = request.args.get('checkout', '')
@@ -192,6 +123,8 @@ def finalbookingform():
     room = request.args.get('room', '')
     summary = request.args.get('summary', '')
     room_price_number = request.args.get('roomPriceNumber', '')
+    user = get_current_user() 
+
     return render_template(
         'finalbookingform.html',
         resort=resort,
@@ -200,8 +133,10 @@ def finalbookingform():
         location=location,
         room=room,
         summary=summary,
-        roomPriceNumber=room_price_number
+        roomPriceNumber=room_price_number,
+        user = user
     )
+
 
 @app.route('/emailtemplate.html', methods=['POST'])
 def emailtemplate():
@@ -306,9 +241,6 @@ def sunset_dashboard():
     bookings = fetch_bookings("Sunset Waters Pool Resort")
     return render_template('sunset_dashboard.html', bookings=bookings, current_year=datetime.now().year)
 
-@app.route('/logout')
-def logout():
-    return redirect(url_for('head_dashboard')) 
 
 @app.route('/feedback_dashboard')
 def feedbacks_dashboard():
@@ -317,9 +249,17 @@ def feedbacks_dashboard():
 
 @app.route('/confirm-booking', methods=['POST'])
 def confirm_booking():
-    resort_name = request.form['resort_name']
-    guest_first_name = request.form['guest_first_name']
-    guest_last_name = request.form['guest_last_name']
+    if 'user_id' not in session:
+        flash('Please log in to confirm a booking.', 'danger')
+        return redirect(url_for('login_page'))
+    
+    # Look up Resort by name (or use slug if better)
+    resort = Resort.query.filter_by(name=request.form['resort_name']).first()
+    if not resort:
+        flash('Selected resort not found.', 'danger')
+        return redirect(url_for('homepage'))
+    
+    resort_id = resort.id
     checkin_date = request.form['checkin_date']
     checkin_time = request.form['checkin_time']
     checkout_date = request.form['checkout_date']
@@ -337,47 +277,139 @@ def confirm_booking():
     reference_number = request.form.get('reference_number')
     created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    # Bank/Card info
     bank_number_last4 = request.form.get('card_last4', '')
     card_holder_name = request.form.get('card_holder', '')
     bank_reference_number = request.form.get('card_reference', '')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''INSERT INTO admin_bookings (
-            resort_name, guest_first_name, guest_last_name, checkin_date, checkin_time,
-            checkout_date, checkout_time, nights, room_type, guests, special_requests,
-            payment_method, total_amount, downpayment, remaining_balance, status, qr_path, reference_number,
-            bank_number_last4, card_holder_name, bank_reference_number, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (
-            resort_name, guest_first_name, guest_last_name, checkin_date, checkin_time,
-            checkout_date, checkout_time, nights, room_type, guests, special_requests,
-            payment_method, total_amount, downpayment, remaining_balance, status, qr_path, reference_number,
-            bank_number_last4, card_holder_name, bank_reference_number, created_at
-        )
+    resort = Resort.query.get(resort_id)
+    if not resort:
+        flash('Selected resort not found.', 'danger')
+        return redirect(url_for('homepage'))
+
+    booking = AdminBooking(
+        resort_id=resort_id,
+        user_id=session['user_id'],
+        checkin_date=checkin_date,
+        checkin_time=checkin_time,
+        checkout_date=checkout_date,
+        checkout_time=checkout_time,
+        nights=nights,
+        room_type=room_type,
+        guests=guests,
+        special_requests=special_requests,
+        payment_method=payment_method,
+        total_amount=total_amount,
+        downpayment=downpayment,
+        remaining_balance=remaining_balance,
+        status=status,
+        qr_path=qr_path,
+        reference_number=reference_number,
+        bank_number_last4=bank_number_last4,
+        card_holder_name=card_holder_name,
+        bank_reference_number=bank_reference_number,
+        created_at=created_at
     )
-    conn.commit()
-    conn.close()
+
+    db.session.add(booking)
+    db.session.commit()
+
     flash('Booking confirmed and saved!', 'success')
     return redirect(url_for('homepage'))
 
 @app.route('/update_status/<int:booking_id>', methods=['POST'])
 def update_status(booking_id):
     new_status = request.form.get('status')
+
     if new_status:
-        conn = get_db_connection()
-        conn.execute(
-            'UPDATE admin_bookings SET status = ? WHERE id = ?',
-            (new_status, booking_id)
-        )
-        conn.commit()
-        conn.close()
-        flash('Booking status updated!', 'success')
+        # Fetch booking by id
+        booking = AdminBooking.query.get(booking_id)
+        if booking:
+            booking.status = new_status
+            db.session.commit()
+            flash('Booking status updated!', 'success')
+        else:
+            flash('Booking not found.', 'danger')
     else:
         flash('No status provided.', 'danger')
+
     return redirect(url_for('head_dashboard'))
+
+@app.route('/get-booked-dates')
+def get_booked_dates():
+    # Fetch bookings with status not 'Cancelled'
+    bookings = AdminBooking.query.filter(AdminBooking.status != 'Cancelled').all()
+
+    disabled_dates = []
+
+    for booking in bookings:
+        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d')
+        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d')
+        delta = end - start
+
+        for i in range(delta.days + 1):
+            day = start + timedelta(days=i)
+            disabled_dates.append(day.strftime('%Y-%m-%d'))
+
+    return jsonify(disabled_dates)
+
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    full_name = request.form['full_name']
+    email = request.form['email']
+    password = request.form['password']
+    contact_number = request.form['contact_number']
+
+    # Check if email is already registered
+    existing_user = User.query.filter_by(email=email).first()
+    if existing_user:
+        flash('Email already registered.', 'danger')
+        return redirect(url_for('login'))
+
+    # Hash password securely
+    hashed_password = generate_password_hash(password)
+
+    # Create new user record
+    new_user = User(
+        username=email,  # using email as username
+        password=hashed_password,
+        full_name=full_name,
+        email=email,
+        contact_number=contact_number
+    )
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    flash('Signup successful, please login.', 'success')
+    return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET'])
+def login_page():
+    return render_template('login.html')  # your login page template
+
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form['email']
+    password = request.form['password']
+
+    # Find user by email
+    user = User.query.filter_by(email=email).first()
+
+    if user and check_password_hash(user.password, password):
+        session['user_id'] = user.id
+        session['user_name'] = user.full_name
+        flash('Login successful!', 'success')
+        return redirect(url_for('show_resorts'))
+    else:
+        flash('Invalid email or password.', 'danger')
+        return redirect(url_for('login_page'))
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.')
+    return redirect(url_for('login_page'))
 
 if __name__ == '__main__':
     init_db()

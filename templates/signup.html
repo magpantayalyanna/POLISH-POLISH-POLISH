@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sign Up</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Open+Sans&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <h2>Create an Account</h2>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash-message">
+          {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <input type="text" name="full_name" placeholder="Full Name">
+      <input type="email" name="email" placeholder="Email">
+      <input type="text" name="contact_number" placeholder="Contact Number">
+      <button type="submit">Sign Up</button>
+      <a href="/login">Already have an account? Login</a>
+    </form>
+  </div>
+</body>
+</html>
