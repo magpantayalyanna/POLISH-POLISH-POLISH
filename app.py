@@ -279,12 +279,20 @@ def fetch_bookings(resort_name=None):
 
 
 def get_all_feedbacks():
-    feedbacks = Feedback.query.order_by(Feedback.id.desc()).all()
-    return feedbacks
+    feedbacks = db.session.query(
+        Feedback.message,
+        Resort.name.label('resort_name')
+    ).join(Resort, Feedback.resort_id == Resort.id).all()
+
+    # Convert to list of dicts for template rendering
+    feedback_list = [{'message': fb.message, 'resort_name': fb.resort_name} for fb in feedbacks]
+    return feedback_list
+
 
 @app.route('/', endpoint='homepage')
 def dashboard():
-    return render_template('index.html')
+    resorts = Resort.query.all()
+    return render_template('index.html', resorts=resorts)
 
 
 @app.route('/submit_feedback', methods=['POST'])
@@ -319,6 +327,14 @@ def show_resorts():
     resorts = Resort.query.all()  # fetch all resorts via ORM
     return render_template('2ndpage.html', resorts=resorts)
 
+def get_feedbacks_for_resort(resort_id):
+    feedbacks = db.session.query(
+        Feedback.message,
+        Resort.slug.label('resort_slug')
+    ).join(Resort, Feedback.resort_id == Resort.id).filter(Feedback.resort_id == resort_id).all()
+
+    return [{'message': fb.message, 'resort': fb.resort_slug} for fb in feedbacks]
+
 @app.route('/resort-details')
 def resort_details():
     resort_slug = request.args.get('resort')
@@ -328,17 +344,13 @@ def resort_details():
     
     if not resort:
         return render_template('3rdpage.html', resort=None, resort_data=None, rooms=[], feedbacks=[])
-    
+
     # Get rooms for this resort
     rooms = Room.query.filter_by(resort_slug=resort_slug).all()
-    
+
     # Get feedbacks for this resort
-    all_feedbacks = get_all_feedbacks()
-    feedbacks = []
-    for fb in all_feedbacks:
-        if fb['resort_name'] == resort_slug:
-            feedbacks.append({'resort': fb['resort_name'], 'message': fb['message']})
-    
+    feedbacks = get_feedbacks_for_resort(resort.id)
+
     # Prepare resort data
     resort_data = {
         'slug': resort.slug,
@@ -350,7 +362,7 @@ def resort_details():
         'image_url': resort.image_url,
         'id': resort.id,
     }
-    
+
     # Prepare rooms data
     rooms_data = []
     for room in rooms:
@@ -365,12 +377,13 @@ def resort_details():
             'amenities': room.amenities or [],
             'total_slots': room.total_slots
         })
-    
-    return render_template('3rdpage.html', 
-                         resort=resort_slug, 
-                         resort_data=resort_data, 
-                         rooms=rooms_data, 
+
+    return render_template('3rdpage.html',
+                         resort=resort_slug,
+                         resort_data=resort_data,
+                         rooms=rooms_data,
                          feedbacks=feedbacks)
+
 
 
 @app.route('/finalbookingform.html')
@@ -675,6 +688,8 @@ def calculate_room_availability(resort_name, target_date=None):
 def feedbacks_dashboard():
     feedbacks = get_all_feedbacks()
     return render_template('feedback_dashboard.html', feedbacks=feedbacks)
+
+
 
 @app.route('/confirm-booking', methods=['POST'])
 def confirm_booking():

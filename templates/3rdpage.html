@@ -193,20 +193,14 @@
     <div class="mx-auto" style="max-width: 700px;">
       <h2 class="text-3xl font-bold text-[#2c3e50] mb-6" style="font-family:'Playfair Display',serif;">Recent Feedback</h2>
       {% if feedbacks and feedbacks|length > 0 %}
-        {% for fb in feedbacks %}
-          <div class="rounded-xl border border-gray-200 bg-[#fcfaf6] shadow p-8 mb-6 w-full text-center">
-            <div class="flex items-center justify-center mb-3 text-yellow-500 text-base" style="letter-spacing:2px;">
-            </div>
-            <p class="italic text-base mb-4 text-[#444]">"{{ fb.message }}"</p>
-            <div class="flex items-center justify-center mt-2">
-              <img src="https://randomuser.me/api/portraits/women/11.jpg" alt="User photo" class="w-12 h-12 rounded-full mr-3">
-              <div class="text-left">
-                <div class="font-semibold text-[#2c3e50]">Anonymous Person</div>
-                <div class="text-xs text-gray-500">{{ resort_names.get(fb.resort, fb.resort) }}</div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
+       {% for fb in feedbacks %}
+        <div class="rounded-xl ...">
+          <p class="italic text-base mb-4 text-[#444]">"{{ fb.message }}"</p>
+          ...
+          <div class="text-xs text-gray-500">{{ resort_data.get(fb.resort, fb.resort) }}</div>
+        </div>
+      {% endfor %}
+
       {% else %}
         <div class="text-center text-gray-500">No feedback yet for this resort.</div>
       {% endif %}
