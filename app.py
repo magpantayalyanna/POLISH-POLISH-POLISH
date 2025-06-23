@@ -1,3 +1,5 @@
+from collections import defaultdict
+from operator import and_
 from flask import Flask, abort, json, render_template, request, redirect, url_for, flash, jsonify, session
 from datetime import date, datetime, timedelta
 import click
@@ -505,22 +507,100 @@ RESORT_MAPPING = {
     'aquavibe': 'AquaVibe Resort'
 }
 
+
+# Updated resort dashboard route
 @app.route('/<resort_key>_dashboard.html')
 def resort_dashboard(resort_key):
+    # Exclude head_dashboard
+    if resort_key == 'head':
+        abort(404)
+    
     # Get the full resort name from the mapping
     resort_name = RESORT_MAPPING.get(resort_key)
     
     if not resort_name:
         abort(404)  # Resort not found
     
+    # Get date from query parameter if provided
+    selected_date = request.args.get('date', None)
+    if selected_date:
+        try:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        except:
+            selected_date = date.today()
+    else:
+        selected_date = date.today()
+    
     bookings = fetch_bookings(resort_name)
     events = prepare_calendar_events(bookings)
-    
+    room_availability = calculate_room_availability(resort_name, selected_date)
     return render_template('resort_dashboard.html', 
                          bookings=bookings,
                          resort_name=resort_name,
                          calendar_events=json.dumps(events),
+                         room_availability=room_availability,
+                         selected_date=selected_date.strftime('%Y-%m-%d'),
                          current_year=datetime.now().year)
+
+
+def calculate_room_availability(resort_name, target_date=None):
+    if target_date is None:
+        target_date = date.today()
+
+    # Get the resort slug from the resort name
+    resort = Resort.query.filter_by(name=resort_name).first()
+    if not resort:
+        return {}
+
+    # Get all rooms for this resort
+    rooms = Room.query.filter_by(resort_slug=resort.slug).all()
+
+    # Map room_id to room_name and store room info
+    room_info = {}
+    room_id_to_name = {}
+    for room in rooms:
+        room_info[room.room_name] = {
+            'room_id': room.id,
+            'total_slots': room.total_slots,
+            'price': room.price,
+            'capacity': f"{room.capacity_min}-{room.capacity_max}",
+            'is_booking': room.is_booking
+        }
+        room_id_to_name[room.id] = room.room_name
+
+    room_ids = [room.id for room in rooms]
+
+    # Get confirmed bookings for the target date and resort
+    confirmed_bookings = AdminBooking.query.filter(
+        AdminBooking.room_id.in_(room_ids),
+        AdminBooking.status == 'confirmed',
+        AdminBooking.checkin_date <= target_date.strftime('%Y-%m-%d'),
+        AdminBooking.checkout_date > target_date.strftime('%Y-%m-%d')
+    ).all()
+
+    # Count occupied slots per room_id (accounting for num_rooms booked)
+    room_occupied = defaultdict(int)
+    for booking in confirmed_bookings:
+        room_occupied[booking.room_id] += booking.num_rooms
+
+    # Calculate availability per room_name
+    room_availability = {}
+    for room_name, info in room_info.items():
+        occupied = room_occupied.get(info['room_id'], 0)
+        available = info['total_slots'] - occupied
+
+        room_availability[room_name] = {
+            'total': info['total_slots'],
+            'occupied': occupied,
+            'available': available,
+            'price': info['price'],
+            'capacity': info['capacity'],
+            'is_booking': info['is_booking'],
+            'occupancy_rate': round((occupied / info['total_slots'] * 100), 1) if info['total_slots'] > 0 else 0
+        }
+
+    print(f"Room availability for {resort_name} on {target_date}: {room_availability}")
+    return room_availability
 
 @app.route('/feedback_dashboard')
 def feedbacks_dashboard():
