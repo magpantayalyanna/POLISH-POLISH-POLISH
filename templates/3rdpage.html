@@ -334,7 +334,7 @@
       document.getElementById('guestButton').disabled = true;
       document.getElementById('guestSummary').innerHTML = "1 room, 1 adult, 0 children";
       const dropdown = document.getElementById('guestDropdown');
-      
+
       dropdown.classList.add('hidden');
       bookingData.currentRoomId = roomId;
       bookingData.currentResortId = resortId;
@@ -366,6 +366,23 @@
 
       createLitepicker(resortId, roomId);
       document.getElementById('roomBookingModal').classList.remove('hidden');
+
+      await fetch('/set-room-booking-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          room_id: roomId,
+          status: 1
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) {
+          console.error(`Failed to set booking status: ${data.message}`);
+        }
+      });
     }
 
     function createLitepicker(resortId, roomId) {

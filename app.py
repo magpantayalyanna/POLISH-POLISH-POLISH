@@ -872,6 +872,32 @@ def get_room_slots():
         'availableSlotsPerDay': available_slots_per_day
     })
 
+@app.route('/set_room_booking_status', methods=['POST'])
+def set_room_booking_status(room_id, status):
+    """
+    Update the is_booking status of a room.
+    :param room_id: ID of the room
+    :param status: 1 for booking open, 0 for closed
+    """
+    room = Room.query.get(room_id)
+    if not room:
+        return False  # or raise exception if preferred
+
+    room.is_booking = 1 if status else 0
+    db.session.commit()
+    return True
+
+def is_room_available_for_booking(room_id):
+    """
+    Check if a room is open for booking.
+    :param room_id: ID of the room
+    :return: True if booking open (is_booking == 1), else False
+    """
+    room = Room.query.get(room_id)
+    if not room:
+        return False  # or raise exception if preferred
+
+    return room.is_booking == 1
 
 
 if __name__ == '__main__':
