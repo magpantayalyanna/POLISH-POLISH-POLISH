@@ -472,8 +472,70 @@ def emailtemplate():
 
 @app.route('/head_dashboard')
 def head_dashboard():
-    bookings = fetch_bookings()
-    return render_template('head_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+    # Get all resorts and their rooms
+    resort_rooms = {}
+    
+    for key, name in RESORT_MAPPING.items():
+        resort = Resort.query.filter_by(name=name).first()
+        if resort:
+            rooms = Room.query.filter_by(resort_slug=resort.slug).all()
+            resort_rooms[key] = rooms
+        else:
+            resort_rooms[key] = []
+    
+    return render_template('head_dashboard.html', 
+                         resort_rooms=resort_rooms,
+                         current_year=datetime.now().year)
+
+@app.route('/update_room_slots', methods=['POST'])
+def update_room_slots():
+    try:
+        data = request.get_json()
+        room_id = data.get('room_id')
+        change = data.get('change', 0)
+        
+        room = Room.query.get(room_id)
+        if not room:
+            return jsonify({'success': False, 'error': 'Room not found'}), 404
+        
+        # Update the total slots
+        new_total = room.total_slots + change
+        
+        # Ensure slots don't go below 0
+        if new_total < 0:
+            return jsonify({'success': False, 'error': 'Cannot have negative slots'}), 400
+        
+        # Check if reducing slots would affect current bookings
+        if change < 0:
+            # Get current confirmed bookings
+            resort = Resort.query.filter_by(slug=room.resort_slug).first()
+            today = date.today()
+            
+            room_ids = [room.id for room in room]
+            confirmed_bookings = AdminBooking.query.filter(
+                AdminBooking.room_id.in_(room_ids),
+                AdminBooking.status == 'Confirmed',
+                AdminBooking.checkout_date >= str(today)
+            ).all()
+            
+            if confirmed_bookings > new_total:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Cannot reduce slots. There are {confirmed_bookings} active bookings.'
+                }), 400
+        
+        room.total_slots = new_total
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'new_total': room.total_slots,
+            'room_id': room.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def prepare_calendar_events(bookings):
     """Helper function to prepare calendar events"""
