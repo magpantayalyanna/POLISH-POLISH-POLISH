@@ -91,7 +91,7 @@
       <h2 class="text-2xl font-semibold text-[#2c3e50] font-[Playfair Display] mb-6 border-b pb-2">Room Types</h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
        {% for room in rooms %}
-        <div onclick="openRoomModal('{{ room.room_name }}','₱ {{room.price | int }}/night','{{ room.capacity_min }}–{{ room.capacity_max }} persons','{{ room.description|e }}','{{ room.image_url }}','{{ room.id }}', 3, '{{ resort_data.id}}')" 
+        <div onclick="openRoomBookingModal('{{ room.id }}', '{{ resort_data.id }}')"
             class="cursor-pointer bg-[#f9f6f1] border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-lg transition">
           <h3 class="text-lg font-semibold text-[#2c3e50] mb-1">{{ room.room_name }}</h3>
           <p class="text-gray-700 font-medium mb-1">₱{{ '{:,.0f}'.format(room.price) }}/night</p>
@@ -111,31 +111,28 @@
     </div>
   {% endif %}
 
-  <!-- Room Details Modal -->
-  <div id="roomModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 relative">
+ <!-- Unified Room Booking Modal -->
+  <div id="roomBookingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 relative overflow-y-auto max-h-[115vh]">
       <button onclick="closeRoomModal()" class="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-2xl font-bold">&times;</button>
+      
       <img id="roomImage" src="" alt="Room Image" class="w-full h-64 object-cover rounded-lg mb-4">
-      <h3 id="roomTitle" class="text-2xl font-bold text-[#2c3e50] mb-2"></h3>
+
+      <h2 id="roomTitle" class="text-2xl font-bold text-[#2c3e50] mb-2"></h2>
       <p id="roomPrice" class="text-lg text-green-700 font-semibold mb-1"></p>
       <p id="roomCapacity" class="text-sm text-gray-700 mb-1"></p>
-      <p id="roomDesc" class="text-sm text-gray-600"></p>
-      <div id="slotInfo" class="slot-info">Select dates to check availability</div>
-      <button id="bookNowBtn" class="book-button mt-4" onclick="openModal()">Check Availability</button>
-    </div>
-  </div>
+      <p id="roomDesc" class="text-sm text-gray-600 mb-4"></p>
 
-  <!-- Booking Modal -->
-  <div id="bookingModal" onclick="closeModal(event)" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 justify-center items-center">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 relative" onclick="event.stopPropagation()">
-      <button onclick="closeModal(event)" class="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-2xl font-bold">&times;</button>
-      <h2 class="text-2xl font-bold mb-6 text-green-700">Complete Your Booking</h2>
+      <div id="slotInfo" class="text-sm mb-4 text-gray-800 font-medium">Select dates to check availability</div>
+
       <div id="bookingError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
+
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Booking Dates</label>
           <div id="datePickerContainer"></div>
         </div>
+
         <div class="relative">
           <label class="block text-sm font-medium text-gray-700 mb-1">Guests</label>
           <button id="guestButton" type="button" onclick="toggleDropdown()" class="w-full border rounded-md px-3 py-2 text-left text-sm shadow">
@@ -150,10 +147,11 @@
                 <button onclick="adjust('room', 1)" class="stepper-btn">+</button>
               </div>
             </div>
+
             <div class="flex justify-between items-center">
               <div>
                 <p class="font-medium text-sm">Adult</p>
-                <p class="text-xs text-gray-500">Ages 18 or above</p>
+                <p class="text-xs text-gray-500">Ages 18+</p>
               </div>
               <div class="flex items-center gap-2">
                 <button onclick="adjust('adult', -1)" class="stepper-btn">−</button>
@@ -161,6 +159,7 @@
                 <button onclick="adjust('adult', 1)" class="stepper-btn">+</button>
               </div>
             </div>
+
             <div class="flex justify-between items-center">
               <div>
                 <p class="font-medium text-sm">Children</p>
@@ -172,15 +171,19 @@
                 <button onclick="adjust('child', 1)" class="stepper-btn">+</button>
               </div>
             </div>
-            <div id="capacityError" class="capacity-error">Total guests exceed room capacity</div>
+
+            <div id="capacityError" class="text-xs text-red-600 hidden">Total guests exceed room capacity</div>
           </div>
         </div>
       </div>
+
       <div class="text-right mt-8">
         <button class="confirm-booking-btn" onclick="confirmBooking()">Confirm Booking</button>
       </div>
+
     </div>
   </div>
+
 
   <!-- Slot Popup Notification -->
   <div id="slotPopup" class="slot-popup"></div>
@@ -210,474 +213,319 @@
     </div>
   </section>
   <script>
-let disabledDates = {};  // { roomId: [disabledDateStr, ...] }
-let picker = null;
+    let disabledDates = {};
+    let picker = null;
 
-function initializeDatePicker(resortId, roomId) {
-  // If dates not yet loaded, fetch them
-  if (!disabledDates[resortId] || !disabledDates[resortId][roomId]) {
-    fetch('/get-booked-dates')
-      .then(response => response.json())
-      .then(data => {
-        disabledDates = data;
+    const bookingData = {
+      currentResortId: null,
+      currentRoomId: null,
+      currentRoomCapacity: null,
+      currentCalendarType: null,
+      currentMonth: new Date().getMonth(),
+      currentYear: new Date().getFullYear(),
+      roomSlots: {},
+      unavailableDates: {},
+      rooms: {},
+      bookings: {},
+      calendarState: {
+        checkin: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: new Date() },
+        checkout: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: new Date(new Date().setDate(new Date().getDate() + 1)) }
+      },
+      roomSlotsPerDate: {},
+    };
 
-        // Initialize picker after data arrives
-        createPicker(resortId, roomId);
-        updateSlotInfo();
-      })
-      .catch(err => console.error('Failed to fetch booked dates:', err));
-  } else {
-    // Already have data, just set picker
-    createPicker(resortId, roomId);
-    updateSlotInfo();
-  }
-}
+    // Load room data once on page load
+    async function fetchRoomData() {
+      try {
+        const response = await fetch('/get-room-data');
+        let data = await response.json();
+        for (const roomId in data) {
+          bookingData.roomSlots[roomId] = data[roomId].total_slots;
+          bookingData.unavailableDates[roomId] = [];
+          bookingData.rooms[roomId] = data[roomId];
+          const res = await fetch(`/get-room-slots?room_id=${roomId}`);
+          data = await res.json();
 
-function createPicker(resortId, roomId) {
-  if (picker) {
-    picker.destroy();  // Remove previous instance
-  }
-  const lockDates = (disabledDates[resortId][roomId] || []).map(dateStr => new Date(dateStr));
+          if (data.error) {
+            console.error(data.error);
+            return;
+          }
 
- const dateRangeElement = document.getElementById('dateRange');
+          // Initialize roomSlotsPerDate for this room
+          bookingData.roomSlotsPerDate[roomId] = {};
 
-  if (dateRangeElement) {
-    picker = new Litepicker({
-      element: dateRangeElement,
-      singleMode: false,
-      format: 'YYYY-MM-DD',
-      minDate: new Date(),
-      lockDays: lockDates || [],
-      setup: (pickerInstance) => {
-        pickerInstance.on('selected', (startDate, endDate) => {
-          bookingData.calendarState.checkin.selectedDate = startDate.format('YYYY-MM-DD');
-          bookingData.calendarState.checkout.selectedDate = endDate.format('YYYY-MM-DD');
+          for (const [date, booked] of Object.entries(data.bookingsPerDay)) {
+            bookingData.roomSlotsPerDate[roomId][date] = data.totalSlots - booked;
+          }
 
+          // Now trigger slot info update if dates are selected
           updateSlotInfo();
-        });
+        }
+        
+        console.log('Loaded room slots:', bookingData.roomSlots);
+      } catch (error) {
+        console.error('Failed to fetch room data:', error);
       }
+    }
+
+    function getLockedDates(resortId, roomId) {
+      return (disabledDates[resortId]?.[roomId] || []).map(dateStr => new Date(dateStr));
+    }
+
+    function createPicker(resortId, roomId) {
+      if (picker) picker.destroy();
+      const dateRangeElement = document.getElementById('dateRange');
+      if (!dateRangeElement) return;
+
+      picker = new Litepicker({
+        element: dateRangeElement,
+        singleMode: false,
+        format: 'YYYY-MM-DD',
+        minDate: new Date(),
+        lockDays: getLockedDates(resortId, roomId),
+        setup: (instance) => {
+          instance.on('selected', (start, end) => {
+            bookingData.calendarState.checkin.selectedDate = start;
+            bookingData.calendarState.checkout.selectedDate = end;
+            updateSlotInfo();
+          });
+        }
+      });
+    }
+
+    async function fetchDisabledDates() {
+      try {
+        const response = await fetch('/get-booked-dates');
+        const data = await response.json();
+        return typeof data === 'object' ? data : {};
+      } catch (error) {
+        console.error('Failed to fetch booked dates:', error);
+        return {};
+      }
+    }
+
+    function getAvailableRooms(roomId, dateStr) {
+      const total = bookingData.roomSlots[roomId] || 0;
+      const booked = bookingData.bookings[roomId]?.[dateStr] || 0;
+      return Math.max(0, total - booked);
+    }
+
+    function updateSlotInfo() {
+      const { checkin, checkout } = bookingData.calendarState;
+      const slotInfo = document.getElementById('slotInfo');
+
+      if (!checkin.selectedDate || !checkout.selectedDate) {
+        slotInfo.textContent = 'Select check-in and check-out dates';
+        return;
+      }
+
+      // Validation check removed — handled by picker lockDays now
+      slotInfo.textContent = `Dates selected: ${checkin.selectedDate} to ${checkout.selectedDate}`;
+      slotInfo.style.color = '#166534';
+      document.getElementById('bookNowBtn').disabled = false;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchRoomData();
     });
-  }
-}
-const today = new Date();
-const tomorrow = new Date();
-tomorrow.setDate(today.getDate() + 1);
-const bookingData = {
-  currentResortId: null,
-  currentRoomId: null,
-  currentRoomCapacity: null,
-  currentCalendarType: null,
-  currentMonth: new Date().getMonth(),
-  currentYear: new Date().getFullYear(),
-  bookings: {},
-  roomSlots: {
-    'Garden Room':5,'Beachfront Suite':5,'Mountain View Room':5,'Lagoon Suite':5,'Deluxe Room':5,
-    'Infinity Suite':5,'Superior Room':5,'Family Suite':5,'Standard Room':5,'Deluxe Suite':5,
-    'Sulu Terrace':5,'Narra Pool Villa':5
-  },
-  unavailableDates: {
-    'Garden Room':[],
-    'Beachfront Suite':[],
-    'Mountain View Room':[],
-    'Lagoon Suite':[],
-    'Deluxe Room':[],
-    'Infinity Suite':[],
-    'Superior Room':[],
-    'Family Suite':[],
-    'Standard Room':[],
-    'Deluxe Suite':[],
-    'Sulu Terrace':[],
-    'Narra Pool Villa':[]
-  },
-  calendarState: {
-    checkin: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: today   },
-    checkout: { currentMonth: new Date().getMonth(), currentYear: new Date().getFullYear(), selectedDate: tomorrow }
-  }
-};
 
-function getAvailableRooms(roomId, dateStr) {
-  if (bookingData.unavailableDates[roomId] && bookingData.unavailableDates[roomId].includes(dateStr)) return 0;
-  if (bookingData.bookings[roomId] && bookingData.bookings[roomId][dateStr]) {
-    return Math.max(0, bookingData.roomSlots[roomId] - bookingData.bookings[roomId][dateStr]);
-  }
-  return bookingData.roomSlots[roomId];
-}
-function isFullyBookedOn(roomId, dateStr) {
-  return getAvailableRooms(roomId, dateStr) <= 0;
-}
-document.addEventListener('DOMContentLoaded', function() {
-  // const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  // dayNames.forEach(day => {
-  //   const dayElement = document.createElement('div');
-  //   dayElement.className = 'calendar-day-header';
-  //   dayElement.textContent = day;
-  //   document.getElementById('checkinDayHeaders').appendChild(dayElement);
-  //   document.getElementById('checkoutDayHeaders').appendChild(dayElement.cloneNode(true));
-  // });
+    async function openRoomBookingModal(roomId, resortId) {
+      bookingData.currentRoomId = roomId;
+      bookingData.currentResortId = resortId;
 
-  // renderCalendar('checkin');
-  // renderCalendar('checkout');
+      // Fetch room details (slots, capacity)
+      const room = bookingData.rooms[roomId];
+      document.getElementById('roomTitle').innerText = room.room_name;
+      document.getElementById('roomPrice').innerText = `₱${room.price}`;
+      document.getElementById('roomCapacity').innerText = `${room.capacity_min}–${room.capacity_max} guests`;
+      document.getElementById('roomDesc').innerText = room.description;
+      document.getElementById('roomImage').src = room.image_url;
 
-  // document.getElementById('checkinDate').addEventListener('click', () => toggleCalendar('checkin'));
-  // document.getElementById('checkoutDate').addEventListener('click', () => toggleCalendar('checkout'));
-  updateSummary();
-});
-async function openRoomModal(title, price, capacity, desc, imageUrl, roomId, roomCapacity=3, resortId) {
-  bookingData.currentResortId = resortId;
-  bookingData.currentRoomId = roomId;
-  bookingData.currentRoomCapacity = parseInt((roomCapacity || '3').toString().replace(/\D/g, '')) || 3;
-  document.getElementById('roomTitle').innerText = title;
-  document.getElementById('roomPrice').innerText = price;
-  document.getElementById('roomCapacity').innerText = capacity;
-  document.getElementById('roomDesc').innerText = desc;
-  document.getElementById('roomImage').src = imageUrl;
-  await initializeDatePicker(resortId, roomId);
-  document.getElementById('roomModal').classList.remove('hidden');
-}
-function updateSlotInfo() {
-  const resortId = bookingData.currentResortId;
-  const roomId = bookingData.currentRoomId;
-  const checkinDate = bookingData.calendarState.checkin.selectedDate;
-  const checkoutDate = bookingData.calendarState.checkout.selectedDate;
-  const slotInfo = document.getElementById('slotInfo');
+      // Fetch disabled dates + per-day availability
+      await fetch(`/get-booked-dates?room_id=${roomId}`)
+        .then(res => res.json())
+        .then(data => {
+          disabledDates = data;
+        });
 
-  if (!checkinDate || !checkoutDate) {
-    slotInfo.textContent = 'Select dates to check availability';
-    return;
-  }
+      await fetch(`/get-room-slots?room_id=${roomId}`)
+        .then(res => res.json())
+        .then(data => {
+          bookingData.roomSlotsPerDate = data;
+        });
 
-  let date = new Date(checkinDate);
-  const end = new Date(checkoutDate);
-  let allAvailable = true;
-  let minAvailable = bookingData.roomSlots[roomId];
+      // Reset picker container
+      const container = document.getElementById('datePickerContainer');
+      container.innerHTML = '<input type="text" id="dateRange" readonly class="w-full border rounded-md px-3 py-2 text-sm shadow">';
 
-  while (date < end) {
-    const dateStr = date.toISOString().split('T')[0];
-
-    if (disabledDates[resortId][roomId] && disabledDates[resortId][roomId].includes(dateStr)) {
-      allAvailable = false;
-      minAvailable = 0;
-      break;
+      createLitepicker(resortId, roomId);
+      document.getElementById('roomBookingModal').classList.remove('hidden');
     }
 
-    const available = getAvailableRooms(roomId, dateStr);
-    if (available <= 0) {
-      allAvailable = false;
-      minAvailable = 0;
-      break;
+    function createLitepicker(resortId, roomId) {
+      const lockDates = (disabledDates[resortId]?.[roomId] || []).map(d => new Date(d));
+
+      if (picker) picker.destroy();
+
+      picker = new Litepicker({
+        element: document.getElementById('dateRange'),
+        singleMode: false,
+        minDate: new Date(),
+        lockDays: lockDates,
+        setup: (pickerInstance) => {
+          pickerInstance.on('selected', (start, end) => {
+            bookingData.calendarState.checkin.selectedDate = start.format('YYYY-MM-DD');
+            bookingData.calendarState.checkout.selectedDate = end.format('YYYY-MM-DD');
+            updateSlotInfo();
+          });
+        }
+      });
     }
 
-    if (available < minAvailable) minAvailable = available;
-
-    date.setDate(date.getDate() + 1);
-  }
-
-  if (allAvailable) {
-    slotInfo.textContent = `${minAvailable} rooms available for your selected dates!`;
-    slotInfo.style.color = '#166534';
-    document.getElementById('bookNowBtn').textContent = 'Book Now';
-    document.getElementById('bookNowBtn').disabled = false;
-  } else {
-    slotInfo.textContent = 'Some dates in your selection are fully booked';
-    slotInfo.style.color = '#991b1b';
-    document.getElementById('bookNowBtn').textContent = 'Check Availability';
-    document.getElementById('bookNowBtn').disabled = false;
-  }
-}
-function closeRoomModal() {
-  document.getElementById('roomModal').classList.add('hidden');
-}
-function openModal() {
-  document.getElementById('bookingError').classList.add('hidden');
-  // if (!bookingData.calendarState.checkin.selectedDate) selectToday('checkin');
-  // if (!bookingData.calendarState.checkout.selectedDate) {
-  //   const tomorrow = new Date();
-  //   tomorrow.setDate(tomorrow.getDate() + 1);
-  //   selectDate('checkout', tomorrow);
-  // }
-  document.getElementById('bookingModal').classList.remove('hidden');
-  document.getElementById('bookingModal').classList.add('flex');
-
-  
-  // Insert a fresh date input each time to avoid duplicates
-  const container = document.getElementById('datePickerContainer');
-  container.innerHTML = '<input type="text" id="dateRange" class="w-full border rounded-md px-3 py-2 text-sm shadow" readonly>';
-
-  // Initialize date picker for this room
-  initializeDatePicker(bookingData.currentResortId, bookingData.currentRoomId);
-
-  document.getElementById('bookingModal').classList.remove('hidden');
-}
-function closeModal(event) {
-  event.stopPropagation();
-  document.getElementById('bookingModal').classList.remove('flex');
-  document.getElementById('bookingModal').classList.add('hidden');
-}
-function toggleDropdown() {
-  document.getElementById('guestDropdown').classList.toggle('hidden');
-}
-function adjust(type, change) {
-  const el = document.getElementById(type);
-  let value = parseInt(el.innerText);
-  let roomCount = parseInt(document.getElementById('room').innerText);
-  let maxPerRoom = bookingData.currentRoomCapacity || 3; // default 3 kung undefined
-  let maxTotal = maxPerRoom * roomCount;
-  let adultCount = parseInt(document.getElementById('adult').innerText);
-  let childCount = parseInt(document.getElementById('child').innerText);
-  let totalGuests = adultCount + childCount;
-  const capacityError = document.getElementById('capacityError');
-
-  if (type === 'room') {
-    // Room logic: keep at least 1, max based on slot
+   function updateSlotInfo() {
     const roomId = bookingData.currentRoomId;
-    const checkinDate = bookingData.calendarState.checkin.selectedDate;
-    const checkoutDate = bookingData.calendarState.checkout.selectedDate;
-    if (!checkinDate || !checkoutDate) {
-      showSlotPopup('Please select dates first');
+    const checkin = bookingData.calendarState.checkin.selectedDate;
+    const checkout = bookingData.calendarState.checkout.selectedDate;
+    const slotInfo = document.getElementById('slotInfo');
+
+    if (!checkin || !checkout) {
+      slotInfo.innerText = 'Select dates to check availability';
       return;
     }
-    let maxRooms = bookingData.roomSlots[roomId];
-    let date = new Date(checkinDate);
-    const end = new Date(checkoutDate);
+
+    let date = new Date(checkin);
+    const end = new Date(checkout);
+    let minAvailable = Number.MAX_SAFE_INTEGER;
+
     while (date < end) {
       const dateStr = date.toISOString().split('T')[0];
-      const available = getAvailableRooms(roomId, dateStr);
-      if (available < maxRooms) maxRooms = available;
+      const available = bookingData.roomSlotsPerDate.availableSlotsPerDay[dateStr];
+
+      if (available === undefined) {
+        // If no data for this date, treat it as fully booked (or you can assume full availability)
+        minAvailable = 5;
+        break;
+      }
+
+      if (available < minAvailable) minAvailable = available;
       date.setDate(date.getDate() + 1);
     }
-    value += change;
-    if (value < 1) value = 1;
-    if (value > maxRooms) {
-      value = maxRooms;
-      showSlotPopup(`Only ${maxRooms} room(s) available for selected dates`);
+
+    if (minAvailable === 0) {
+      slotInfo.innerText = 'No available rooms for these dates.';
+    } else {
+      slotInfo.innerText = `${minAvailable} room${minAvailable !== 1 ? 's' : ''} available for these dates.`;
     }
-    // Pag may pagbabago ng room, adjust adults/children kung sumobra sa bagong maxTotal
-    maxTotal = maxPerRoom * value;
-    if (adultCount + childCount > maxTotal) {
-      // Adjust downwards
-      let newAdult = Math.min(adultCount, maxTotal);
-      let newChild = Math.max(0, maxTotal - newAdult);
-      document.getElementById('adult').innerText = newAdult;
-      document.getElementById('child').innerText = newChild;
-      capacityError.style.display = 'none';
+  }
+
+
+    function confirmBooking() {
+      const checkinDate = picker.getStartDate().format('YYYY-MM-DD');
+      const checkoutDate = picker.getEndDate().format('YYYY-MM-DD');
+      const numRooms = parseInt(document.getElementById('room').innerText, 10);
+      const roomId = bookingData.currentRoomId;
+
+      // Validate dates and room count here if needed
+      if (new Date(checkinDate) >= new Date(checkoutDate)) {
+        alert('Check-out must be after check-in date.');
+        return;
+      }
+
+      processBooking(roomId, checkinDate, checkoutDate, numRooms);
     }
-    el.innerText = value;
-    updateSummary();
-    return;
-  }
 
-  // For adult/child:
-  let newAdult = adultCount;
-  let newChild = childCount;
-  if (type === 'adult') {
-    value += change;
-    if (value < 1) value = 1;
-    newAdult = value;
-  } else if (type === 'child') {
-    value += change;
-    if (value < 0) value = 0;
-    newChild = value;
-  }
+    function processBooking(roomId, checkinDate, checkoutDate, rooms) {
+      if (!bookingData.bookings[roomId]) bookingData.bookings[roomId] = {};
+      let date = new Date(checkinDate);
+      const end = new Date(checkoutDate);
+      while (date < end) {
+        const dateStr = date.toISOString().split('T')[0];
+        if (!bookingData.bookings[roomId][dateStr]) bookingData.bookings[roomId][dateStr] = 0;
+        bookingData.bookings[roomId][dateStr] += rooms;
+        date.setDate(date.getDate() + 1);
+      }
 
-  let newTotal = newAdult + newChild;
-  if (newTotal > maxTotal) {
-    capacityError.style.display = 'block';
-    return;
-  } else {
-    capacityError.style.display = 'none';
-    document.getElementById('adult').innerText = newAdult;
-    document.getElementById('child').innerText = newChild;
-    updateSummary();
-  }
-}
+      // ---- Get all info for params ----
+      const roomTitle = document.getElementById('roomTitle').innerText;
+      const roomPrice = document.getElementById('roomPrice').innerText;
+      const roomPriceNumber = parseInt(roomPrice.replace(/[^\d]/g, ''), 10);
+      const guestSummary = document.getElementById('guestSummary').innerText;
+      const resortName = document.querySelector('.resort-section h2').innerText;
+      const locationLabel = Array.from(document.querySelectorAll('.resort-section h3')).find(
+        el => el.innerText.trim().toLowerCase().startsWith('location')
+      );
+      const resortLocation = locationLabel ? locationLabel.nextElementSibling.innerText.trim() : '';
 
-function updateSummary() {
-  const room = document.getElementById('room').innerText;
-  const adult = document.getElementById('adult').innerText;
-  const child = document.getElementById('child').innerText;
-  document.getElementById('guestSummary').innerText =
-    `${room} room${room > 1 ? 's' : ''}, ${adult} adult${adult > 1 ? 's' : ''}, ${child} child${child != 1 ? 'ren' : ''}`;
-}
-function confirmBooking() {
-  const roomId = bookingData.currentRoomId;
-  const checkinDate = picker.getStartDate();
-  const checkoutDate = picker.getEndDate();
-  const rooms = parseInt(document.getElementById('room').innerText);
-  const adults = parseInt(document.getElementById('adult').innerText);
-  const children = parseInt(document.getElementById('child').innerText);
-  const totalGuests = adults + children;
-  const errorElement = document.getElementById('bookingError');
-
-  // Validation: dates selected
-  if (!checkinDate || !checkoutDate) {
-    errorElement.textContent = 'Please select both check-in and check-out dates';
-    errorElement.classList.remove('hidden');
-    return;
-  }
-
-  // Validation: check-out after check-in
-  const checkinDateValue = new Date(checkinDate).setHours(0,0,0,0);
-  const checkoutDateValue = new Date(checkoutDate).setHours(0,0,0,0);
-
-  if (checkoutDateValue <= checkinDateValue) {
-    errorElement.textContent = 'Check-out date must be after check-in date';
-    errorElement.classList.remove('hidden');
-    return;
-  }
-
-  // Validation: guest capacity
-  if (totalGuests > (bookingData.currentRoomCapacity * rooms)) {
-    errorElement.textContent = `Total guests (${totalGuests}) exceed room capacity (max ${bookingData.currentRoomCapacity * rooms} for ${rooms} room(s))`;
-    errorElement.classList.remove('hidden');
-    return;
-  }
-
-  let date = new Date(checkinDate);
-  const end = new Date(checkoutDate);
-
-  while (date < end) {
-    const dateWithoutTime = date.setHours(0,0,0,0);
-    if (disabledDates.includes(dateWithoutTime)) {
-      const dateStr = new Date(dateWithoutTime).toISOString().split('T')[0];
-      errorElement.textContent = `Selected date ${dateStr} is already fully booked. Please choose a different date.`;
-      errorElement.classList.remove('hidden');
-      return;
+      // ---- Redirect with params (only once) ----
+      const params = new URLSearchParams({
+        checkin: checkinDate,
+        checkout: checkoutDate,
+        summary: guestSummary,
+        room: roomTitle,
+        roomPrice: roomPrice, 
+        roomPriceNumber: roomPriceNumber,
+        resort: resortName,
+        location: resortLocation
+      });
+      window.location.href = `finalbookingform.html?${params.toString()}`;
     }
-    date.setDate(date.getDate() + 1);
-  }
+    function closeRoomModal() {
+      document.getElementById('roomBookingModal').classList.add('hidden');
+    }
+    function toggleDropdown() {
+      const dropdown = document.getElementById('guestDropdown');
+      dropdown.classList.toggle('hidden');
+    }
+    function adjust(type, change) {
+      const element = document.getElementById(type);
+      let value = parseInt(element.innerText, 10);
+      value += change;
 
-  // If all validations pass — proceed to booking
-  processBooking(roomId, checkinDate.format('YYYY-MM-DD'), checkoutDate.format('YYYY-MM-DD'), rooms);
-}
+      // Prevent negative numbers
+      if (value < 0) value = 0;
 
-function processBooking(roomId, checkinDate, checkoutDate, rooms) {
-  if (!bookingData.bookings[roomId]) bookingData.bookings[roomId] = {};
-  let date = new Date(checkinDate);
-  const end = new Date(checkoutDate);
-  while (date < end) {
-    const dateStr = date.toISOString().split('T')[0];
-    if (!bookingData.bookings[roomId][dateStr]) bookingData.bookings[roomId][dateStr] = 0;
-    bookingData.bookings[roomId][dateStr] += rooms;
-    date.setDate(date.getDate() + 1);
-  }
+      // Room minimum is 1
+      if (type === 'room' && value < 1) value = 1;
 
-  // ---- Get all info for params ----
-  const roomTitle = document.getElementById('roomTitle').innerText;
-  const roomPrice = document.getElementById('roomPrice').innerText;
-  const roomPriceNumber = parseInt(roomPrice.replace(/[^\d]/g, ''), 10);
-  const guestSummary = document.getElementById('guestSummary').innerText;
-  const resortName = document.querySelector('.resort-section h2').innerText;
-  const locationLabel = Array.from(document.querySelectorAll('.resort-section h3')).find(
-    el => el.innerText.trim().toLowerCase().startsWith('location')
-  );
-  const resortLocation = locationLabel ? locationLabel.nextElementSibling.innerText.trim() : '';
+      element.innerText = value;
 
-  // ---- Redirect with params (only once) ----
-  const params = new URLSearchParams({
-    checkin: checkinDate,
-    checkout: checkoutDate,
-    summary: guestSummary,
-    room: roomTitle,
-    roomPrice: roomPrice, 
-    roomPriceNumber: roomPriceNumber,
-    resort: resortName,
-    location: resortLocation
-  });
-  window.location.href = `finalbookingform.html?${params.toString()}`;
-}
-function showSlotPopup(message) {
-  const popup = document.getElementById('slotPopup');
-  popup.textContent = message;
-  popup.style.display = 'block';
-  setTimeout(() => popup.style.display = 'none', 1800);
-}
-function toggleCalendar(type) {
-  const otherType = type === 'checkin' ? 'checkout' : 'checkin';
-  document.getElementById(`${otherType}Calendar`).classList.remove('show');
-  document.getElementById(`${type}Calendar`).classList.toggle('show');
-}
-function changeMonth(type, offset) {
-  bookingData.calendarState[type].currentMonth += offset;
-  if (bookingData.calendarState[type].currentMonth > 11) {
-    bookingData.calendarState[type].currentMonth = 0;
-    bookingData.calendarState[type].currentYear++;
-  } else if (bookingData.calendarState[type].currentMonth < 0) {
-    bookingData.calendarState[type].currentMonth = 11;
-    bookingData.calendarState[type].currentYear--;
-  }
-  renderCalendar(type);
-}
-// function renderCalendar(type) {
-//   const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-//   const state = bookingData.calendarState[type];
-//   const firstDay = new Date(state.currentYear, state.currentMonth, 1);
-//   const startingDay = firstDay.getDay();
-//   const daysInMonth = new Date(state.currentYear, state.currentMonth + 1, 0).getDate();
-//   document.getElementById(`${type}MonthYear`).textContent = `${monthNames[state.currentMonth]} ${state.currentYear}`;
-//   const daysContainer = document.getElementById(`${type}Days`);
-//   daysContainer.innerHTML = '';
-//   for (let i = 0; i < startingDay; i++) daysContainer.appendChild(document.createElement('div'));
-//   const today = new Date();
-//   today.setHours(0, 0, 0, 0);
-//   for (let day = 1; day <= daysInMonth; day++) {
-//     const date = new Date(state.currentYear, state.currentMonth, day);
-//     const dateStr = date.toISOString().split('T')[0];
-//     const dayElement = document.createElement('div');
-//     dayElement.className = 'calendar-day';
-//     dayElement.textContent = day;
-//     if (date < today) {
-//       dayElement.classList.add('disabled');
-//     } else if (isFullyBookedOn(bookingData.currentRoomId, dateStr)) {
-//       dayElement.classList.add('fully-booked');
-//       dayElement.title = 'Fully booked';
-//     } else {
-//       dayElement.addEventListener('click', () => selectDate(type, date));
-//     }
-//     if (state.selectedDate && date.getDate() === state.selectedDate.getDate() &&
-//         date.getMonth() === state.selectedDate.getMonth() && date.getFullYear() === state.selectedDate.getFullYear()) {
-//       dayElement.classList.add('selected');
-//     }
-//     daysContainer.appendChild(dayElement);
-//   }
-// }
-// function selectDate(type, date) {
-//   bookingData.calendarState[type].selectedDate = date;
-//   const day = date.getDate().toString().padStart(2, '0');
-//   const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//   document.getElementById(`${type}Date`).value = `${month}/${day}/${date.getFullYear()}`;
-//   document.getElementById(`${type}Calendar`).classList.remove('show');
-//   if (type === 'checkin' && bookingData.calendarState.checkout.selectedDate && date > bookingData.calendarState.checkout.selectedDate) {
-//     const nextDay = new Date(date);
-//     nextDay.setDate(date.getDate() + 1);
-//     selectDate('checkout', nextDay);
-//   }
-//   updateSlotInfo();
-// }
-function selectToday(type) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  selectDate(type, today);
-  bookingData.calendarState[type].currentMonth = today.getMonth();
-  bookingData.calendarState[type].currentYear = today.getFullYear();
-  renderCalendar(type);
-}
-function clearSelection(type) {
-  bookingData.calendarState[type].selectedDate = null;
-  document.getElementById(`${type}Date`).value = '';
-  document.getElementById(`${type}Calendar`).classList.remove('show');
-  updateSlotInfo();
-}
-window.addEventListener('click', function(e) {
-  const button = document.getElementById('guestButton');
-  const dropdown = document.getElementById('guestDropdown');
-  if (!button.contains(e.target) && !dropdown.contains(e.target)) dropdown.classList.add('hidden');
-  const checkinCalendar = document.getElementById('checkinCalendar');
-  const checkoutCalendar = document.getElementById('checkoutCalendar');
-  const checkinInput = document.getElementById('checkinDate');
-  const checkoutInput = document.getElementById('checkoutDate');
-  // if (!checkinCalendar.contains(e.target) && !checkinInput.contains(e.target)) checkinCalendar.classList.remove('show');
-  // if (!checkoutCalendar.contains(e.target) && !checkoutInput.contains(e.target)) checkoutCalendar.classList.remove('show');
-});
-</script>
+      updateGuestSummary();
+      validateCapacity();
+    }
+
+    function validateCapacity() {
+      const roomId = bookingData.currentRoomId;
+      const roomCount = parseInt(document.getElementById('room').innerText, 10);
+      const adults = parseInt(document.getElementById('adult').innerText, 10);
+      const children = parseInt(document.getElementById('child').innerText, 10);
+
+      const totalGuests = adults + children;
+
+      const roomData = bookingData.rooms[roomId];
+      const minCapacity = roomData.capacity_min * roomCount;
+      const maxCapacity = roomData.capacity_max * roomCount;
+
+      const capacityError = document.getElementById('capacityError');
+
+      if (totalGuests < minCapacity) {
+        capacityError.innerText = `Minimum ${minCapacity} guests required for ${roomCount} room${roomCount > 1 ? 's' : ''}.`;
+        capacityError.classList.add('visible');
+      } else if (totalGuests > maxCapacity) {
+        capacityError.innerText = `Maximum ${maxCapacity} guests allowed for ${roomCount} room${roomCount > 1 ? 's' : ''}.`;
+        capacityError.classList.add('visible');
+      } else {
+        capacityError.classList.remove('visible');
+      }
+    }
+    function updateGuestSummary() {
+      const rooms = document.getElementById('room').innerText;
+      const adults = document.getElementById('adult').innerText;
+      const children = document.getElementById('child').innerText;
+
+      const summary = `${rooms} room${rooms > 1 ? 's' : ''}, ${adults} adult${adults > 1 ? 's' : ''}, ${children} child${children !== '1' ? 'ren' : ''}`;
+      document.getElementById('guestSummary').innerText = summary;
+    }
+
+  </script>
 </body>
 </html>

@@ -14,31 +14,31 @@
     <h2 class="text-xl font-semibold mb-4">Who's the lead guest?</h2>
     <form class="space-y-4" method="post" action="{{ url_for('emailtemplate') }}" autocomplete="off" id="bookingForm">
       <!-- Name and Contact -->
-      <input
-        type="text"
-        name="full_name"
-        id="fullName"
-        value="{{ user.full_name }}"
-        class="border rounded px-4 py-2 w-full bg-gray-100"
-        readonly
-      >
-      <input
-        type="email"
-        name="email"
-        id="email"
-        value="{{ user.email }}"
-        class="border rounded px-4 py-2 w-full bg-gray-100"
-        readonly
-      >
-
-      <input
-        type="tel"
-        name="phone"
-        id="phone"
-        value="{{ user.contact_number }}"
-        class="border rounded px-4 py-2 w-full bg-gray-100"
-        readonly
-      >
+       <input
+          type="text"
+          name="first_name"
+          placeholder="First name *"
+          class="border rounded px-4 py-2 w-full"
+          pattern="^[A-Za-z\s\-]+$"
+          title="Only letters, spaces, and hyphens allowed"
+          required
+          autocomplete="off"
+          oninput="this.value = this.value.replace(/[^A-Za-z\s\-]/g, '')"
+        >
+        <input
+          type="text"
+          name="last_name"
+          placeholder="Last name *"
+          class="border rounded px-4 py-2 w-full"
+          pattern="^[A-Za-z\s\-]+$"
+          title="Only letters, spaces, and hyphens allowed"
+          required
+          autocomplete="off"
+          oninput="this.value = this.value.replace(/[^A-Za-z\s\-]/g, '')"
+        >
+     
+      <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
+      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^(\+?\d{11})$" title="Enter a valid phone number with 11 digits (numbers only, can start with + sign)" required>
       <!-- Special Requests -->
       <div class="mt-6">
         <h3 class="font-medium mb-2">Special requests</h3>

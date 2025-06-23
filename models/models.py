@@ -1,17 +1,6 @@
 from datetime import datetime
 from models.extensions import db
 
-class User(db.Model):
-    __tablename__ = 'users'
-
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String, unique=True, nullable=False)
-    password = db.Column(db.String, nullable=False)
-    full_name = db.Column(db.String)
-    email = db.Column(db.String, unique=True)
-    contact_number = db.Column(db.String)
-
-
 class Resort(db.Model):
     __tablename__ = 'resorts'
 
@@ -43,19 +32,24 @@ class Room(db.Model):
     amenities = db.Column(db.JSON)
     total_slots = db.Column(db.Integer, default=5)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_booking = db.Column(db.Integer, default=0)
 
 class AdminBooking(db.Model):
     __tablename__ = 'admin_bookings'
 
     id = db.Column(db.Integer, primary_key=True)
     resort_id = db.Column(db.Integer, db.ForeignKey('resorts.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    checkin_date = db.Column(db.String)
-    checkin_time = db.Column(db.String)
-    checkout_date = db.Column(db.String)
-    checkout_time = db.Column(db.String)
-    nights = db.Column(db.Integer)
     room_id = db.Column(db.Integer, db.ForeignKey('rooms.id'), nullable=False)
+    guest_first_name = db.Column(db.String, nullable=False)
+    guest_last_name = db.Column(db.String, nullable=False)
+    guest_email = db.Column(db.String, nullable=False)
+    guest_phone = db.Column(db.String, nullable=False)
+    
+    checkin_date = db.Column(db.String, nullable=False)
+    checkout_date = db.Column(db.String, nullable=False)
+    nights = db.Column(db.Integer)
+    num_rooms = db.Column(db.Integer, nullable=False, default=1)  # ← new column for number of rooms booked
+    
     guests = db.Column(db.String)
     special_requests = db.Column(db.Text)
     payment_method = db.Column(db.String)
@@ -68,25 +62,11 @@ class AdminBooking(db.Model):
     bank_number_last4 = db.Column(db.String)
     card_holder_name = db.Column(db.String)
     bank_reference_number = db.Column(db.String)
-    created_at = db.Column(db.String)
-    is_booking = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Optional relationships for easier joins/access
     resort = db.relationship('Resort', backref=db.backref('bookings', lazy=True))
     room = db.relationship('Room', backref=db.backref('bookings', lazy=True))
-    user = db.relationship('User', backref=db.backref('bookings', lazy=True))
 
-
-class TempBooking(db.Model):
-    __tablename__ = 'temp_bookings'
-
-    id = db.Column(db.Integer, primary_key=True)
-    resort_name = db.Column(db.String)
-    checkin_date = db.Column(db.String)
-    checkin_time = db.Column(db.String)
-    checkout_date = db.Column(db.String)
-    checkout_time = db.Column(db.String)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
 class Feedback(db.Model):
     __tablename__ = 'feedback'

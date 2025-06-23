@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import click
 import os
 from flask.cli import with_appcontext
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from models.extensions import db
-from models.models import Resort, Feedback, Room, User, AdminBooking, TempBooking
+from models.models import Resort, Feedback, Room, AdminBooking
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///admin_bookings.db'
@@ -230,13 +230,48 @@ def init_db():
     click.echo("Database initialized successfully with resorts and rooms populated.")
 
 app.cli.add_command(init_db)
-
 def fetch_bookings(resort_name=None):
-    query = AdminBooking.query
+    query = db.session.query(
+        AdminBooking,
+        Resort.name.label('resort_name'),
+        Room.room_name.label('room_type')
+    ).join(Resort, AdminBooking.resort_id == Resort.id
+    ).join(Room, AdminBooking.room_id == Room.id)
+
     if resort_name:
-        query = query.filter_by(resort_name=resort_name)
-    bookings = query.order_by(AdminBooking.created_at.desc()).all()
+        query = query.filter(Resort.name == resort_name)
+
+    query = query.order_by(AdminBooking.created_at.desc())
+    results = query.all()
+
+    # Build list of dicts for template
+    bookings = []
+    for booking, resort_name, room_type in results:
+        bookings.append({
+            'id': booking.id,
+            'resort_name': resort_name,
+            'guest_first_name': booking.guest_first_name,
+            'guest_last_name': booking.guest_last_name,
+            'checkin_date': booking.checkin_date,
+            'checkout_time': '',  # if you plan to add time later
+            'checkout_date': booking.checkout_date,
+            'checkin_time': '',  # if you plan to add time later
+            'room_type': room_type,
+            'guests': booking.guests,
+            'payment_method': booking.payment_method,
+            'total_amount': booking.total_amount,
+            'downpayment': booking.downpayment,
+            'remaining_balance': booking.remaining_balance,
+            'reference_number': booking.reference_number,
+            'status': booking.status,
+            'bank_number_last4': booking.bank_number_last4,
+            'card_holder_name': booking.card_holder_name,
+            'bank_reference_number': booking.bank_reference_number
+        })
+
     return bookings
+
+
 
 def get_all_feedbacks():
     feedbacks = Feedback.query.order_by(Feedback.id.desc()).all()
@@ -244,8 +279,6 @@ def get_all_feedbacks():
 
 @app.route('/', endpoint='homepage')
 def dashboard():
-    if 'user_id' not in session:
-        return redirect(url_for('login_page'))
     return render_template('index.html')
 
 
@@ -334,13 +367,6 @@ def resort_details():
                          rooms=rooms_data, 
                          feedbacks=feedbacks)
 
-def get_current_user():
-    user_id = session.get('user_id')
-    if not user_id:
-        return None  # Or redirect to login / handle anonymous users
-    
-    user = User.query.get(user_id)
-    return user
 
 @app.route('/finalbookingform.html')
 def finalbookingform():
@@ -352,7 +378,6 @@ def finalbookingform():
     room = request.args.get('room', '')
     summary = request.args.get('summary', '')
     room_price_number = request.args.get('roomPriceNumber', '')
-    user = get_current_user() 
 
     return render_template(
         'finalbookingform.html',
@@ -363,7 +388,6 @@ def finalbookingform():
         room=room,
         summary=summary,
         roomPriceNumber=room_price_number,
-        user = user
     )
 
 
@@ -371,6 +395,8 @@ def finalbookingform():
 def emailtemplate():
     guest_first_name = request.form.get('first_name', '')
     guest_last_name = request.form.get('last_name', '')
+    email = request.form.get('email', '')
+    phone = request.form.get('phone', '')
     smoking = request.form.get('smoking', '')
     bed = request.form.get('bed', '')
     resort_name = request.form.get('resort_name', '')
@@ -431,7 +457,9 @@ def emailtemplate():
         card_type=card_type,
         card_last4=card_last4,
         card_reference=card_reference,
-        card_amount_paid=card_amount_paid
+        card_amount_paid=card_amount_paid,
+        email=email,
+        phone=phone
     )
 
 @app.route('/head_dashboard')
@@ -478,9 +506,6 @@ def feedbacks_dashboard():
 
 @app.route('/confirm-booking', methods=['POST'])
 def confirm_booking():
-    if 'user_id' not in session:
-        flash('Please log in to confirm a booking.', 'danger')
-        return redirect(url_for('login_page'))
     
     # Get resort by name (or use slug if better)
     resort = Resort.query.filter_by(name=request.form['resort_name']).first()
@@ -500,10 +525,8 @@ def confirm_booking():
     room_id = room.id
 
     # Booking details
-    checkin_date = request.form['checkin_date']
-    checkin_time = request.form['checkin_time']
-    checkout_date = request.form['checkout_date']
-    checkout_time = request.form['checkout_time']
+    checkin_date = datetime.strptime(request.form['checkin_date'], '%Y-%m-%d').date()
+    checkout_date = datetime.strptime(request.form['checkout_date'], '%Y-%m-%d').date()
     nights = int(request.form['nights'])
     guests = request.form['guests']
     special_requests = request.form['special_requests']
@@ -514,21 +537,23 @@ def confirm_booking():
     status = request.form['status']
     qr_path = request.form['qr_path']
     reference_number = request.form.get('reference_number')
-    created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.now()
 
     bank_number_last4 = request.form.get('card_last4', '')
     card_holder_name = request.form.get('card_holder', '')
     bank_reference_number = request.form.get('card_reference', '')
 
+    guest_first_name = request.form.get('guest_first_name', '')
+    guest_last_name = request.form.get('guest_last_name', '')
+    guest_email = request.form.get('email', '')
+    guest_phone = request.form.get('phone', '')
+
     # Create booking
     booking = AdminBooking(
         resort_id=resort_id,
         room_id=room_id,
-        user_id=session['user_id'],
         checkin_date=checkin_date,
-        checkin_time=checkin_time,
         checkout_date=checkout_date,
-        checkout_time=checkout_time,
         nights=nights,
         guests=guests,
         special_requests=special_requests,
@@ -542,7 +567,11 @@ def confirm_booking():
         bank_number_last4=bank_number_last4,
         card_holder_name=card_holder_name,
         bank_reference_number=bank_reference_number,
-        created_at=created_at
+        created_at=created_at,
+        guest_first_name=guest_first_name,
+        guest_last_name=guest_last_name,
+        guest_email=guest_email,
+        guest_phone=guest_phone,
     )
 
     db.session.add(booking)
@@ -569,37 +598,6 @@ def update_status(booking_id):
         flash('No status provided.', 'danger')
 
     return redirect(url_for('head_dashboard'))
-
-@app.route('/get-booked-dates')
-def get_booked_dates():
-    bookings = AdminBooking.query.filter(AdminBooking.status != 'Cancelled').all()
-
-    disabled_dates = {}
-
-    for booking in bookings:
-        resort_id = booking.resort_id
-        room_id = booking.room_id  # Assuming you now have a room_id field in AdminBooking
-
-        if resort_id not in disabled_dates:
-            disabled_dates[resort_id] = {}
-
-        if room_id not in disabled_dates[resort_id]:
-            disabled_dates[resort_id][room_id] = []
-
-        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d')
-        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d')
-        delta = end - start
-
-        for i in range(delta.days + 1):
-            day = start + timedelta(days=i)
-            date_str = day.strftime('%Y-%m-%d')
-
-            if date_str not in disabled_dates[resort_id][room_id]:
-                disabled_dates[resort_id][room_id].append(date_str)
-
-    return jsonify(disabled_dates)
-
-
 
 
 @app.route('/signup', methods=['POST'])
@@ -633,32 +631,102 @@ def signup():
     flash('Signup successful, please login.', 'success')
     return redirect(url_for('login'))
 
-@app.route('/login', methods=['GET'])
-def login_page():
-    return render_template('login.html')  # your login page template
+@app.route('/get-room-data')
+def get_room_data():
+    rooms = Room.query.all()
 
-@app.route('/login', methods=['POST'])
-def login():
-    email = request.form['email']
-    password = request.form['password']
+    room_data = {}
+    for room in rooms:
+        room_data[room.id] = {
+            'room_name': room.room_name,
+            'price': room.price,
+            'capacity_min': room.capacity_min,
+            'capacity_max': room.capacity_max,
+            'description': room.description,
+            'image_url': room.image_url,
+            'total_slots': room.total_slots,
+            'resort_slug': room.resort_slug
+        }
 
-    # Find user by email
-    user = User.query.filter_by(email=email).first()
+    return jsonify(room_data)
 
-    if user and check_password_hash(user.password, password):
-        session['user_id'] = user.id
-        session['user_name'] = user.full_name
-        flash('Login successful!', 'success')
-        return redirect(url_for('show_resorts'))
-    else:
-        flash('Invalid email or password.', 'danger')
-        return redirect(url_for('login_page'))
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash('You have been logged out.')
-    return redirect(url_for('login_page'))
+@app.route('/get-booked-dates')
+def get_booked_dates():
+    room_id = request.args.get('room_id')
+
+    if not room_id:
+        return jsonify({'error': 'Missing room_id'}), 400
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({'error': 'Room not found'}), 404
+
+    total_slots = room.total_slots
+
+    # Fetch bookings only for this room
+    bookings = AdminBooking.query.filter_by(room_id=room_id).all()
+
+    bookings_per_day = {}
+    disabled = []
+
+    for booking in bookings:
+        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d')
+        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d')
+        num_rooms = getattr(booking, 'num_rooms', 1) or 1  # fallback if null/None
+
+        while start < end:
+            date_str = start.strftime('%Y-%m-%d')
+            bookings_per_day[date_str] = bookings_per_day.get(date_str, 0) + num_rooms
+            if bookings_per_day[date_str] >= total_slots:
+                if date_str not in disabled:
+                    disabled.append(date_str)
+            start += timedelta(days=1)
+
+    return jsonify({
+        'disabled': disabled,
+        'bookings_per_day': bookings_per_day,
+        'total_slots': total_slots
+    })
+
+@app.route('/get-room-slots')
+def get_room_slots():
+    room_id = request.args.get('room_id')
+    if not room_id:
+        return jsonify({'error': 'Missing room_id'}), 400
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({'error': 'Room not found'}), 404
+
+    total_slots = room.total_slots
+
+    bookings = AdminBooking.query.filter_by(room_id=room_id).all()
+
+    bookings_per_day = {}
+    available_slots_per_day = {}
+
+    for booking in bookings:
+        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d')
+        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d')
+        num_rooms = booking.num_rooms or 1
+
+        while start < end:
+            date_str = start.strftime('%Y-%m-%d')
+            bookings_per_day[date_str] = bookings_per_day.get(date_str, 0) + num_rooms
+            start += timedelta(days=1)
+
+    # Calculate remaining slots per day
+    for date_str, booked in bookings_per_day.items():
+        remaining = max(0, total_slots - booked)
+        available_slots_per_day[date_str] = remaining
+
+    return jsonify({
+        'totalSlots': total_slots,
+        'bookingsPerDay': bookings_per_day,
+        'availableSlotsPerDay': available_slots_per_day
+    })
+
 
 if __name__ == '__main__':
     init_db()
