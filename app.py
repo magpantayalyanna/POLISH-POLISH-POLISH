@@ -270,7 +270,8 @@ def fetch_bookings(resort_name=None):
             'status': booking.status,
             'bank_number_last4': booking.bank_number_last4,
             'card_holder_name': booking.card_holder_name,
-            'bank_reference_number': booking.bank_reference_number
+            'guest_phone': booking.guest_phone,
+            'guest_email': booking.guest_email,
         })
 
     return bookings
@@ -498,67 +499,74 @@ def update_room_slots():
         room = Room.query.get(room_id)
         if not room:
             return jsonify({'success': False, 'error': 'Room not found'}), 404
-        
-        # Update the total slots
+
         new_total = room.total_slots + change
-        
-        # Ensure slots don't go below 0
         if new_total < 0:
             return jsonify({'success': False, 'error': 'Cannot have negative slots'}), 400
-        
-        # Check if reducing slots would affect current bookings
+
         if change < 0:
-            # Get current confirmed bookings
-            resort = Resort.query.filter_by(slug=room.resort_slug).first()
             today = date.today()
-            
-            room_ids = [room.id for room in room]
             confirmed_bookings = AdminBooking.query.filter(
-                AdminBooking.room_id.in_(room_ids),
-                AdminBooking.status == 'Confirmed',
+                AdminBooking.room_id == room.id,
+                AdminBooking.status == 'confirmed',
                 AdminBooking.checkout_date >= str(today)
             ).all()
-            
-            if confirmed_bookings > new_total:
+
+            if len(confirmed_bookings) > new_total:
                 return jsonify({
                     'success': False, 
-                    'error': f'Cannot reduce slots. There are {confirmed_bookings} active bookings.'
+                    'error': f'Cannot reduce slots. There are {len(confirmed_bookings)} active bookings.'
                 }), 400
-        
+
         room.total_slots = new_total
         db.session.commit()
-        
+
         return jsonify({
             'success': True, 
             'new_total': room.total_slots,
             'room_id': room.id
         })
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 def prepare_calendar_events(bookings):
-    """Helper function to prepare calendar events"""
+    """Prepare calendar events with color coding and extended details for tooltip."""
     events = []
     for booking in bookings:
-        # Fix the status comparison - make it case-insensitive
         status = booking.get('status', '').lower()
-        
+
+        # Color coding based on status
         if status == 'confirmed':
             color = "#38a169"
         elif status == 'pending':
             color = "#ecc94b"
-        else:  # cancelled or any other status
+        else:
             color = "#e53e3e"
-            
+
+        print(booking)
+        # Prepare event object
         events.append({
             "title": f"{booking['guest_first_name']} {booking['guest_last_name']} ({booking['status']})",
             "start": booking['checkin_date'],
             "end": booking['checkout_date'],
-            "color": color
+            "color": color,
+            "extendedProps": {
+                "guest_name": f"{booking['guest_first_name']} {booking['guest_last_name']}",
+                "guest_email": booking.get('guest_email'),
+                "guest_phone": booking.get('guest_phone'),
+                "details":booking.get('guests'),
+                "num_rooms": booking.get('num_rooms'),
+                "payment_method": booking.get('payment_method'),
+                "total_amount": booking.get('total_amount'),
+                "special_requests": booking.get('special_requests'),
+                "reference_number": booking.get('reference_number'),
+                "notes": booking.get('notes')
+            }
         })
     return events
+
 
 # Define resort mapping
 RESORT_MAPPING = {
@@ -569,8 +577,6 @@ RESORT_MAPPING = {
     'sunset': 'Sunset Waters Pool Resort',
     'aquavibe': 'AquaVibe Resort'
 }
-
-
 # Updated resort dashboard route
 @app.route('/<resort_key>_dashboard.html')
 def resort_dashboard(resort_key):
@@ -700,7 +706,7 @@ def confirm_booking():
     total_amount = float(request.form['total_amount'])
     downpayment = round(total_amount * 0.15, 2)
     remaining_balance = round(total_amount - downpayment, 2)
-    status = request.form['status']
+    status = 'pending'
     qr_path = request.form['qr_path']
     reference_number = request.form.get('reference_number')
     created_at = datetime.now()
@@ -873,31 +879,32 @@ def get_room_slots():
     })
 
 @app.route('/set_room_booking_status', methods=['POST'])
-def set_room_booking_status(room_id, status):
-    """
-    Update the is_booking status of a room.
-    :param room_id: ID of the room
-    :param status: 1 for booking open, 0 for closed
-    """
+def set_room_booking_status_api():
+    data = request.get_json()
+
+    room_id = data.get('room_id')
+    status = data.get('status')
+
     room = Room.query.get(room_id)
     if not room:
-        return False  # or raise exception if preferred
+        return jsonify({'success': False, 'message': 'Room not found.'}), 404
 
     room.is_booking = 1 if status else 0
     db.session.commit()
-    return True
 
-def is_room_available_for_booking(room_id):
-    """
-    Check if a room is open for booking.
-    :param room_id: ID of the room
-    :return: True if booking open (is_booking == 1), else False
-    """
+    return jsonify({'success': True, 'message': f'Room {room_id} booking status set to {status}.'})
+
+@app.route('/check_room_booking_status', methods=['GET'])
+def check_room_booking_status():
+    room_id = request.args.get('room_id')
+    if not room_id:
+        return jsonify({'success': False, 'message': 'Missing room_id'}), 400
+
     room = Room.query.get(room_id)
     if not room:
-        return False  # or raise exception if preferred
+        return jsonify({'success': False, 'message': 'Room not found'}), 404
 
-    return room.is_booking == 1
+    return jsonify({'success': True, 'is_booking': room.is_booking})
 
 
 if __name__ == '__main__':
