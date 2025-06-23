@@ -38,7 +38,7 @@
         >
      
       <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
-      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^\d{11}$" title="Enter a valid phone number with exactly 11 digits (numbers only)" required>
+      <input type="text" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^\d{11}$" maxlength="11"inputmode="numeric"title="Enter a valid phone number with exactly 11 digits (numbers only)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
       <!-- Special Requests -->
       <div class="mt-6">
         <h3 class="font-medium mb-2">Special requests</h3>
