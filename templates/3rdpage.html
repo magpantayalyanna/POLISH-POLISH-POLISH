@@ -566,6 +566,21 @@
       validateCapacity();
     }
 
+    function getDatesInRange(startDateStr, endDateStr) {
+      const dates = [];
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        dates.push(`${yyyy}-${mm}-${dd}`);
+      }
+
+      return dates;
+    }
+
     function validateCapacity() {
       const roomId = bookingData.currentRoomId;
       const roomCount = parseInt(document.getElementById('room').innerText, 10);
@@ -579,10 +594,17 @@
 
       const capacityError = document.getElementById('capacityError');
       const addBtn = document.getElementById('confirmBookingBtn');
-
+      
+      let selectedDates = getDatesInRange(
+        bookingData.calendarState.checkin.selectedDate,
+        bookingData.calendarState.checkout.selectedDate
+      );
+      const minAvailableSlots = Math.min(
+        ...selectedDates.map(date => bookingData.roomSlotsPerDate.availableSlotsPerDay[date] !== undefined ? bookingData.roomSlotsPerDate.availableSlotsPerDay[date] : Infinity)
+      );
       // Check if requested room count exceeds available slots
-      if (roomCount > roomData.total_slots) {
-        capacityError.innerText = `Only ${roomData.total_slots} room${roomData.total_slots > 1 ? 's' : ''} available.`;
+      if (roomCount > minAvailableSlots) {
+        capacityError.innerText = `Only ${minAvailableSlots} room${minAvailableSlots > 1 ? 's' : ''} available.`;
         capacityError.classList.remove('hidden');
         addBtn.disabled = true;
         return false;
