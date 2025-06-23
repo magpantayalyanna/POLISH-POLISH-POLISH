@@ -8,13 +8,21 @@ from flask.cli import with_appcontext
 from markupsafe import Markup
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-
+from flask_mail import Mail, Message
 from models.extensions import db
 from models.models import Resort, Feedback, Room, AdminBooking
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///admin_bookings.db'
 app.secret_key = "your_secret_key"
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'way2gobatangas@gmail.com'
+app.config['MAIL_PASSWORD'] = 'cmpffgocffkmdfay'
+app.config['MAIL_DEFAULT_SENDER'] = 'way2gobatangas@gmail.com'
+mail = Mail(app)
 
 db.init_app(app)
 
@@ -33,7 +41,7 @@ def init_db():
             "name": "BlueWave Pool Resort",
             "image_url": "static/images/Resort 10.jpg",
             "is_pet_friendly": True,
-            "description": "Enjoy a relaxing stay at BlueWave, featuring spacious pools and family-friendly amenities.",
+            "description": "Enjoy a relaxing stay at BlueWave, featuring spacious pools and family-friendly amenities. As a pet-friendly resort, we encourage all guests to be responsible pet owners during their visit.",
             "location": "Lipa, Batangas",
             "google_maps_link": "https://www.google.com/maps?q=Lipa,+Batangas",
             "amenities": ["Wave pool", "Cottages", "Grill area", "Kiddie pool"]
@@ -63,7 +71,7 @@ def init_db():
             "name": "Lagoon Cove Resort",
             "image_url": "static/images/Resort 4.jpg",
             "is_pet_friendly": True,
-            "description": "A nature-inspired pool resort with a relaxing lagoon, perfect for unwinding and reunions.",
+            "description": "A nature-inspired pool resort with a relaxing lagoon, perfect for unwinding, reunions, and quality time with your furry friends—just remember to care for them responsibly.",
             "location": "Tanauan, Batangas",
             "google_maps_link": "https://www.google.com/maps?q=Tanauan,+Batangas",
             "amenities": ["Lagoon pool", "BBQ pit", "Wide lawn", "Clubhouse"]
@@ -83,7 +91,7 @@ def init_db():
             "name": "CoolSprings Private Resort",
             "image_url": "static/images/Resort 6.jpg",
             "is_pet_friendly": True,
-            "description": "Experience exclusive privacy and cool spring water pools, ideal for private gatherings.",
+            "description": "Experience exclusive privacy and cool spring water pools, ideal for private gatherings. Pets are welcome—please be a responsible pet owner and help us maintain a safe, clean environment for everyone.",
             "location": "Sto. Tomas, Batangas",
             "google_maps_link": "https://www.google.com/maps?q=Sto.+Tomas,+Batangas",
             "amenities": ["Private pool villas", "Natural spring water", "Conference room", "Bonfire area"]
@@ -435,7 +443,7 @@ def emailtemplate():
         total_amount = float(total_amount)
     except Exception:
         total_amount = 0.0
-    downpayment = round(total_amount * 0.10, 2)
+    downpayment = round(total_amount * 0.15, 2)
     remaining_balance = round(total_amount - downpayment, 2)
     checkin_time = request.form.get('checkin_time', "2:00 PM")
     checkout_time = request.form.get('checkout_time', "12:00 PM")
@@ -921,6 +929,70 @@ def check_room_booking_status():
     return jsonify({'success': True, 'is_booking': room.is_booking})
 
 
+@app.route('/update_resort_status/<int:booking_id>', methods=['POST'])
+def update_resort_booking(booking_id):
+    booking_id = booking_id
+    new_status = request.form.get('status')
+    booking = AdminBooking.query.get(booking_id)
+    if not booking:
+        flash('Booking not found.', 'danger')
+        return redirect(request.referrer or url_for('head_dashboard'))
+    
+    # Update booking fields from form
+    # booking.guest_first_name = request.form.get('guest_first_name')
+    # booking.guest_last_name = request.form.get('guest_last_name')
+    # booking.room_type = request.form.get('room_type')
+    # booking.checkin_date = request.form.get('checkin_date')
+    # booking.checkout_date = request.form.get('checkout_date')
+    # booking.guests = request.form.get('guests')
+    booking.status = new_status
+    # Add other fields as needed
+    room = Room.query.filter_by(id=booking.room_id).first()
+
+    db.session.commit()
+
+    # Only send email if status changed to Confirmed
+    if new_status.lower() == 'confirmed':
+        try:
+            msg = Message(
+                subject="Your Booking is Confirmed!",
+                recipients=[booking.guest_email]
+            )
+            msg.html = render_template('mailmessagetemplate.html',
+                guest_first_name=booking.guest_first_name,
+                guest_last_name=booking.guest_last_name,
+                resort_name=booking.resort.name if booking.resort else '',
+                room_type=room.room_name if room else '',
+                guests=booking.guests,
+                checkin_date=booking.checkin_date,
+                checkin_time=getattr(booking, 'checkin_time', '2:00 PM'),
+                checkout_date=booking.checkout_date,
+                checkout_time=getattr(booking, 'checkout_time', '12:00 PM'),
+                special_requests=getattr(booking, 'special_requests', 'None'),
+                total_amount=booking.total_amount,
+                downpayment=booking.downpayment,
+                remaining_balance=booking.remaining_balance,
+                payment_method=booking.payment_method,
+                card_holder=getattr(booking, 'card_holder_name', ''),
+                card_type=getattr(booking, 'card_type', ''),
+                card_last4=getattr(booking, 'bank_number_last4', ''),
+                card_reference=getattr(booking, 'bank_reference_number', '')
+            )
+            mail.send(msg)
+            flash('Confirmation email sent to guest!', 'success')
+        except Exception as e:
+            flash(f'Could not send confirmation email: {e}', 'danger')
+
+    # Redirect back to the resort dashboard
+    if booking.resort:
+        resort_key = None
+        for key, name in RESORT_MAPPING.items():
+            if name == booking.resort.name:
+                resort_key = key
+                break
+        if resort_key:
+            return redirect(url_for('resort_dashboard', resort_key=resort_key))
+    return redirect(url_for('head_dashboard'))
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)

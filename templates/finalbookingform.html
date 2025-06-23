@@ -38,11 +38,11 @@
         >
      
       <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
-      <input type="text" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^\d{11}$" maxlength="11"inputmode="numeric"title="Enter a valid phone number with exactly 11 digits (numbers only)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+      <input type="text" name="phone" placeholder="Phone number *" class="border rounded px-4 py-2 w-full" pattern="^\d{11}$" maxlength="11"inputmode="numeric"title="Enter a valid phone number with exactly 11 digits (numbers only)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
       <!-- Special Requests -->
       <div class="mt-6">
         <h3 class="font-medium mb-2">Special requests</h3>
-        <p class="text-sm text-gray-500 mb-2">This is a non-smoking property</p>
+        <p class="text-sm text-gray-500 mb-2"> </p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded">
           <div>
             <label class="block font-medium text-sm mb-1">Room type preference</label>
@@ -54,7 +54,7 @@
             </label>
           </div>
           <div>
-            <label class="block font-medium text-sm mb-1">Bed preference</label>
+            <label class="block font-medium text-sm mb-1">Additional</label>
             <label class="flex items-center space-x-2 mb-1">
               <input type="radio" name="bed" value="Large bed" class="form-radio"> <span>I'd like a large bed</span>
             </label>

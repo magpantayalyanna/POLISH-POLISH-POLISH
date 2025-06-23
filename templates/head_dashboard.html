@@ -644,7 +644,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <form method="POST" action="{{ url_for('update_status', booking_id=booking['id']) }}">
+                                <form method="POST" action="{{ url_for('update_resort_booking', booking_id=booking['id']) }}">
                                     <select name="status" 
                                         class="status-select {{ booking['status']|lower }}" 
                                         onchange="this.className='status-select '+this.value.toLowerCase(); this.form.submit();">
