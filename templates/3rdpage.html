@@ -113,7 +113,7 @@
 
  <!-- Unified Room Booking Modal -->
   <div id="roomBookingModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex justify-center items-center">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 relative overflow-y-auto max-h-[115vh]">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 relative overflow-y-auto max-h-[115vh]" style="height:60vh">
       <button onclick="closeRoomModal()" class="absolute top-4 right-4 text-gray-500 hover:text-red-600 text-2xl font-bold">&times;</button>
       
       <img id="roomImage" src="" alt="Room Image" class="w-full h-64 object-cover rounded-lg mb-4">
@@ -135,7 +135,7 @@
 
         <div class="relative">
           <label class="block text-sm font-medium text-gray-700 mb-1">Guests</label>
-          <button id="guestButton" type="button" onclick="toggleDropdown()" class="w-full border rounded-md px-3 py-2 text-left text-sm shadow">
+          <button id="guestButton" type="button" onclick="toggleDropdown()" class="w-full border rounded-md px-3 py-2 text-left text-sm shadow" disabled>
             <span id="guestSummary">1 room, 1 adult, 0 children</span>
           </button>
           <div id="guestDropdown" class="absolute left-0 right-0 bg-white border rounded-lg shadow-lg mt-2 p-4 space-y-3 hidden z-50">
@@ -330,6 +330,12 @@
     });
 
     async function openRoomBookingModal(roomId, resortId) {
+      
+      document.getElementById('guestButton').disabled = true;
+      document.getElementById('guestSummary').innerHTML = "1 room, 1 adult, 0 children";
+      const dropdown = document.getElementById('guestDropdown');
+      
+      dropdown.classList.add('hidden');
       bookingData.currentRoomId = roomId;
       bookingData.currentResortId = resortId;
 
@@ -377,6 +383,7 @@
             bookingData.calendarState.checkin.selectedDate = start.format('YYYY-MM-DD');
             bookingData.calendarState.checkout.selectedDate = end.format('YYYY-MM-DD');
             updateSlotInfo();
+            document.getElementById('guestButton').disabled = false;
           });
         }
       });
@@ -434,7 +441,9 @@
         alert('Check-out must be after check-in date.');
         return;
       }
-
+       if (!validateCapacity()) {
+        return; // Prevent adding if invalid
+      }
       processBooking(roomId, checkinDate, checkoutDate, numRooms);
     }
 
@@ -503,7 +512,6 @@
       const roomCount = parseInt(document.getElementById('room').innerText, 10);
       const adults = parseInt(document.getElementById('adult').innerText, 10);
       const children = parseInt(document.getElementById('child').innerText, 10);
-
       const totalGuests = adults + children;
 
       const roomData = bookingData.rooms[roomId];
@@ -511,17 +519,39 @@
       const maxCapacity = roomData.capacity_max * roomCount;
 
       const capacityError = document.getElementById('capacityError');
+      const addBtn = document.getElementById('confirmBookingBtn');
 
+      // Check if requested room count exceeds available slots
+      if (roomCount > roomData.total_slots) {
+        capacityError.innerText = `Only ${roomData.total_slots} room${roomData.total_slots > 1 ? 's' : ''} available.`;
+        capacityError.classList.remove('hidden');
+        addBtn.disabled = true;
+        return false;
+      }
+
+      // Check if total guests below minimum capacity
       if (totalGuests < minCapacity) {
         capacityError.innerText = `Minimum ${minCapacity} guests required for ${roomCount} room${roomCount > 1 ? 's' : ''}.`;
-        capacityError.classList.add('visible');
-      } else if (totalGuests > maxCapacity) {
-        capacityError.innerText = `Maximum ${maxCapacity} guests allowed for ${roomCount} room${roomCount > 1 ? 's' : ''}.`;
-        capacityError.classList.add('visible');
-      } else {
-        capacityError.classList.remove('visible');
+        capacityError.classList.remove('hidden');
+        addBtn.disabled = true;
+        return false;
       }
+
+      // Check if total guests exceed maximum capacity
+      if (totalGuests > maxCapacity) {
+        capacityError.innerText = `Maximum ${maxCapacity} guests allowed for ${roomCount} room${roomCount > 1 ? 's' : ''}.`;
+        capacityError.classList.remove('hidden');
+        addBtn.disabled = true;
+        return false;
+      }
+
+      // All good — hide error and enable button
+      capacityError.classList.add('hidden');
+      addBtn.disabled = false;
+      return true;
     }
+
+
     function updateGuestSummary() {
       const rooms = document.getElementById('room').innerText;
       const adults = document.getElementById('adult').innerText;
