@@ -2,12 +2,15 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from datetime import datetime
 import sqlite3
 import os
+from flask.cli import with_appcontext
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"  # Needed for flash messages!
 
 feedbacks = []
 
+@app.cli.command("init-db")
+@with_appcontext
 def init_db():
     # BOOKINGS DB
     conn = sqlite3.connect('admin_bookings.db')
@@ -17,8 +20,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS admin_bookings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             resort_name TEXT,
-            guest_first_name TEXT,
-            guest_last_name TEXT,
+            user_id integer,
             checkin_date TEXT,
             checkin_time TEXT,
             checkout_date TEXT,
@@ -40,6 +42,53 @@ def init_db():
             created_at TEXT
         )
     ''')
+    # TEMP BOOKINGS TABLE — for pending booking attempts
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS temp_bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resort_name TEXT,
+            checkin_date TEXT,
+            checkin_time TEXT,
+            checkout_date TEXT,
+            checkout_time TEXT,
+            user_id integer
+        )
+    ''')
+    # USERS TABLE
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            full_name TEXT,
+            email TEXT UNIQUE,
+            contact_number TEXT
+        )
+    ''')
+    # RESORTS TABLE
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS resorts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slug TEXT NOT NULL UNIQUE,        -- e.g. 'aquavibe-resort'
+            name TEXT NOT NULL,               -- e.g. 'AquaVibe Resort'
+            image_url TEXT,                   -- relative path to image
+            is_pet_friendly INTEGER DEFAULT 0, -- 1 for pet friendly, 0 otherwise
+            description TEXT
+        )
+    ''')
+    resorts = [
+    ("aquavibe-resort", "AquaVibe Resort", "static/images/Resort 1.jpg", 0, "Elegant pool resort with serene views."),
+    ("crystalsplash-poolside-haven", "CrystalSplash Poolside Haven", "static/images/Resort 2.jpg", 0, "Modern poolside haven perfect for families."),
+    ("sunset-waters-pool-resort", "Sunset Waters Pool Resort", "static/images/Resort 3.jpg", 0, "Experience unforgettable sunset swims."),
+    ("bluewave-pool-resort", "BlueWave Pool Resort", "static/images/Resort 10.jpg", 1, "Pet-friendly resort with spacious pools."),
+    ("lagoon-cove-resort", "Lagoon Cove Resort", "static/images/Resort 4.jpg", 1, "Relax in lush, pet-welcoming surroundings."),
+    ("coolsprings-private-resort", "CoolSprings Private Resort", "static/images/Resort 6.jpg", 1, "Exclusive, pet-friendly private pools.")
+    ]
+
+    cursor.executemany('''
+        INSERT OR IGNORE INTO resorts (slug, name, image_url, is_pet_friendly, description)
+        VALUES (?, ?, ?, ?, ?)
+    ''', resorts)
     conn.commit()
     conn.close()
 
@@ -108,6 +157,18 @@ def submit_feedback():
 @app.route('/2ndpage')
 def explore():
     return render_template('2ndpage.html')
+
+@app.route('/resorts')
+def show_resorts():
+    conn = sqlite3.connect('admin_bookings.db')
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT slug, name, image_url, is_pet_friendly, description FROM resorts")
+    resorts = cursor.fetchall()
+
+    conn.close()
+
+    return render_template('2ndpage.html', resorts=resorts)
 
 @app.route('/resort-details')
 def resort_details():
