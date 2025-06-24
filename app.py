@@ -12,10 +12,12 @@ from flask_mail import Mail, Message
 from models.extensions import db
 from models.models import Resort, Feedback, Room, AdminBooking
 
+# Initialize Flask app and mail
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///admin_bookings.db'
 app.secret_key = "your_secret_key"
 
+# Email configuration for booking notifications
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
@@ -24,10 +26,12 @@ app.config['MAIL_PASSWORD'] = 'cmpffgocffkmdfay'
 app.config['MAIL_DEFAULT_SENDER'] = 'way2gobatangas@gmail.com'
 mail = Mail(app)
 
+# Initialize database with the Flask app
 db.init_app(app)
 
 feedbacks = []
 
+# CLI command to initialize (reset and seed) the database
 @click.command("init-db")
 @with_appcontext
 def init_db():
@@ -222,7 +226,7 @@ def init_db():
         ]
     }
 
-    # Insert resorts
+    # Insert resorts and their rooms into the database if not already present
     for resort_data in resorts_data:
         existing_resort = Resort.query.filter_by(slug=resort_data['slug']).first()
         if not existing_resort:
@@ -242,6 +246,8 @@ def init_db():
     click.echo("Database initialized successfully with resorts and rooms populated.")
 
 app.cli.add_command(init_db)
+
+# Fetch all bookings, optionally filtered by resort name
 def fetch_bookings(resort_name=None):
     query = db.session.query(
         AdminBooking,
@@ -285,8 +291,7 @@ def fetch_bookings(resort_name=None):
 
     return bookings
 
-
-
+# Get all feedbacks with associated resort name
 def get_all_feedbacks():
     feedbacks = db.session.query(
         Feedback.message,
@@ -297,13 +302,13 @@ def get_all_feedbacks():
     feedback_list = [{'message': fb.message, 'resort_name': fb.resort_name} for fb in feedbacks]
     return feedback_list
 
-
+# Homepage showing all resorts
 @app.route('/', endpoint='homepage')
 def dashboard():
     resorts = Resort.query.all()
     return render_template('index.html', resorts=resorts)
 
-
+# Save feedback from user
 @app.route('/submit_feedback', methods=['POST'])
 def submit_feedback():
     resort_id = request.form.get('resort')
@@ -327,15 +332,18 @@ def submit_feedback():
 
     return redirect(url_for('homepage'))
 
+# Explore/second page view
 @app.route('/2ndpage')
 def explore():
     return render_template('2ndpage.html')
 
+# Show all resorts (list view)
 @app.route('/resorts')
 def show_resorts():
     resorts = Resort.query.all()  # fetch all resorts via ORM
     return render_template('2ndpage.html', resorts=resorts)
 
+# Get all feedbacks for a specific resort
 def get_feedbacks_for_resort(resort_id):
     feedbacks = db.session.query(
         Feedback.message,
@@ -344,6 +352,7 @@ def get_feedbacks_for_resort(resort_id):
 
     return [{'message': fb.message, 'resort': fb.resort_slug} for fb in feedbacks]
 
+# Resort details page with rooms and feedbacks
 @app.route('/resort-details')
 def resort_details():
     resort_slug = request.args.get('resort')
@@ -393,8 +402,7 @@ def resort_details():
                          rooms=rooms_data,
                          feedbacks=feedbacks)
 
-
-
+# Final booking form view (summary form)
 @app.route('/finalbookingform.html')
 def finalbookingform():
     # Booking info from URL params
@@ -419,9 +427,10 @@ def finalbookingform():
         numberOfRooms=numberOfRooms,
     )
 
-
+# Email template preview after booking
 @app.route('/emailtemplate.html', methods=['POST'])
 def emailtemplate():
+    # Collect booking details from form
     guest_first_name = request.form.get('first_name', '')
     guest_last_name = request.form.get('last_name', '')
     email = request.form.get('email', '')
@@ -493,6 +502,7 @@ def emailtemplate():
         numberOfRooms=numberOfRooms
     )
 
+# Admin dashboard for all resorts
 @app.route('/head_dashboard')
 def head_dashboard():
     # Get all resorts and their rooms
@@ -511,6 +521,7 @@ def head_dashboard():
                          current_year=datetime.now().year,
                          bookings=bookings) 
 
+# API to update total slots for a room (e.g. admin action)
 @app.route('/update_room_slots', methods=['POST'])
 def update_room_slots():
     try:
@@ -526,6 +537,7 @@ def update_room_slots():
         if new_total < 0:
             return jsonify({'success': False, 'error': 'Cannot have negative slots'}), 400
 
+        # Prevent reducing slots below number of confirmed bookings
         if change < 0:
             today = date.today()
             confirmed_bookings = AdminBooking.query.filter(
@@ -553,6 +565,7 @@ def update_room_slots():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# Prepares bookings as calendar events for display (with color coding)
 def prepare_calendar_events(bookings):
     """Prepare calendar events with color coding and extended details for tooltip."""
     events = []
@@ -588,8 +601,7 @@ def prepare_calendar_events(bookings):
         })
     return events
 
-
-# Define resort mapping
+# Resort key mapping for dashboards
 RESORT_MAPPING = {
     'bluewave': 'BlueWave Pool Resort',
     'coolsprings': 'CoolSprings Private Resort',
@@ -598,7 +610,8 @@ RESORT_MAPPING = {
     'sunset': 'Sunset Waters Pool Resort',
     'aquavibe': 'AquaVibe Resort'
 }
-# Updated resort dashboard route
+
+# Resort dashboard for a specific resort (shows bookings, stats, calendar)
 @app.route('/<resort_key>_dashboard.html')
 def resort_dashboard(resort_key):
     # Exclude head_dashboard
@@ -632,7 +645,7 @@ def resort_dashboard(resort_key):
                          selected_date=selected_date.strftime('%Y-%m-%d'),
                          current_year=datetime.now().year)
 
-
+# Calculate available/occupied slots for each room in a resort for a given date
 def calculate_room_availability(resort_name, target_date=None):
     if target_date is None:
         target_date = date.today()
@@ -692,13 +705,13 @@ def calculate_room_availability(resort_name, target_date=None):
     print(f"Room availability for {resort_name} on {target_date}: {room_availability}")
     return room_availability
 
+# Feedback management dashboard
 @app.route('/feedback_dashboard')
 def feedbacks_dashboard():
     feedbacks = get_all_feedbacks()
     return render_template('feedback_dashboard.html', feedbacks=feedbacks)
 
-
-
+# Save a new booking to the database from booking form
 @app.route('/confirm-booking', methods=['POST'])
 def confirm_booking():
     
@@ -744,7 +757,7 @@ def confirm_booking():
     guest_phone = request.form.get('phone', '')
     num_rooms = request.form.get('numberOfRooms', 1)
 
-    # Create booking
+    # Create booking object and save to db
     booking = AdminBooking(
         resort_id=resort_id,
         room_id=room_id,
@@ -777,7 +790,7 @@ def confirm_booking():
     flash('Booking confirmed and saved!', 'success')
     return redirect(url_for('homepage'))
 
-
+# Update the status of a booking (admin action)
 @app.route('/update_status/<int:booking_id>', methods=['POST'])
 def update_status(booking_id):
     new_status = request.form.get('status')
@@ -796,6 +809,7 @@ def update_status(booking_id):
 
     return redirect(url_for('head_dashboard'))
 
+# API: Get all room data for frontend (AJAX)
 @app.route('/get-room-data')
 def get_room_data():
     rooms = Room.query.all()
@@ -815,7 +829,7 @@ def get_room_data():
 
     return jsonify(room_data)
 
-
+# API: Get booked dates for a specific room (for calendar disable in frontend)
 @app.route('/get-booked-dates')
 def get_booked_dates():
     room_id = request.args.get('room_id')
@@ -859,6 +873,7 @@ def get_booked_dates():
 
 from datetime import datetime, date, timedelta
 
+# API: Get available slots per day for a specific room (for calendar/booking frontend)
 @app.route('/get-room-slots')
 def get_room_slots():
     room_id = request.args.get('room_id')
@@ -907,6 +922,7 @@ def get_room_slots():
         'availableSlotsPerDay': available_slots_per_day
     })
 
+# API: Set a room as being booked or available (locking mechanism for booking process)
 @app.route('/set_room_booking_status', methods=['POST'])
 def set_room_booking_status_api():
     data = request.get_json()
@@ -923,6 +939,7 @@ def set_room_booking_status_api():
 
     return jsonify({'success': True, 'message': f'Room {room_id} booking status set to {status}.'})
 
+# API: Check if a room is currently being booked (for disabling button in frontend)
 @app.route('/check_room_booking_status', methods=['GET'])
 def check_room_booking_status():
     room_id = request.args.get('room_id')
@@ -935,7 +952,7 @@ def check_room_booking_status():
 
     return jsonify({'success': True, 'is_booking': room.is_booking})
 
-
+# Update booking status for a resort, send email if confirmed
 @app.route('/update_resort_status/<int:booking_id>', methods=['POST'])
 def update_resort_booking(booking_id):
     booking_id = booking_id
@@ -945,15 +962,8 @@ def update_resort_booking(booking_id):
         flash('Booking not found.', 'danger')
         return redirect(request.referrer or url_for('head_dashboard'))
     
-    # Update booking fields from form
-    # booking.guest_first_name = request.form.get('guest_first_name')
-    # booking.guest_last_name = request.form.get('guest_last_name')
-    # booking.room_type = request.form.get('room_type')
-    # booking.checkin_date = request.form.get('checkin_date')
-    # booking.checkout_date = request.form.get('checkout_date')
-    # booking.guests = request.form.get('guests')
+    # Update booking fields from form (other fields could be updated as needed)
     booking.status = new_status
-    # Add other fields as needed
     room = Room.query.filter_by(id=booking.room_id).first()
 
     db.session.commit()
@@ -1001,6 +1011,7 @@ def update_resort_booking(booking_id):
             return redirect(url_for('resort_dashboard', resort_key=resort_key))
     return redirect(url_for('head_dashboard'))
 
+# Entrypoint: Run the app and initialize DB if run as script
 if __name__ == '__main__':
     init_db()
     app.run(port=5001, debug=True)
