@@ -202,7 +202,7 @@
     <h1>Way2GO</h1>
     <nav>
       <a href="{{ url_for('homepage') }}" class="active">Home</a>
-      <a href="/2ndpage">Destinations</a>
+      <a href="/resorts">Destinations</a>
     </nav>
   </header>
 
@@ -230,12 +230,9 @@
       <label for="resort">Which resort did you visit?</label>
       <select name="resort" id="resort" required>
         <option disabled selected value="">-- Select a Resort --</option>
-        <option value="bluewave-pool-resort">BlueWave Pool Resort</option>
-        <option value="aquavibe-resort">AquaVibe Resort</option>
-        <option value="crystalsplash-poolside-haven">CrystalSplash Poolside Haven</option>
-        <option value="lagoon-cove-resort">Lagoon Cove Resort</option>
-        <option value="sunset-waters-pool-resort">Sunset Waters Pool Resort</option>
-        <option value="coolsprings-private-resort">CoolSprings Private Resort</option>
+        {% for resort in resorts %}
+          <option value="{{ resort.id }}">{{ resort.name }}</option>
+        {% endfor %}
       </select>
       <label for="message">Your feedback</label>
       <textarea name="message" id="message" placeholder="Write your experience here..." required></textarea>

@@ -14,15 +14,7 @@
     <h2 class="text-xl font-semibold mb-4">Who's the lead guest?</h2>
     <form class="space-y-4" method="post" action="{{ url_for('emailtemplate') }}" autocomplete="off" id="bookingForm">
       <!-- Name and Contact -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-<<<<<<< HEAD
-        <input type="text" name="first_name" placeholder="First name *" class="border rounded px-4 py-2 w-full" pattern="[A-Za-z\s\-]+" title="Only letters, spaces, and hyphens allowed" required>
-        <input type="text" name="last_name" placeholder="Last name *" class="border rounded px-4 py-2 w-full" pattern="[A-Za-z\s\-]+" title="Only letters, spaces, and hyphens allowed" required>
-      </div>
-      <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
-      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^(\+?\d{11})$" title="Enter a valid phone number with 11 digits (numbers only, can start with + sign)" required
-=======
-        <input
+       <input
           type="text"
           name="first_name"
           placeholder="First name *"
@@ -44,29 +36,27 @@
           autocomplete="off"
           oninput="this.value = this.value.replace(/[^A-Za-z\s\-]/g, '')"
         >
-      </div>
+     
       <input type="email" name="email" placeholder="Email *" class="border rounded px-4 py-2 w-full" required>
-      <input type="tel" name="phone" placeholder="Phone number" class="border rounded px-4 py-2 w-full" pattern="^(\+?\d{11})$" title="Enter a valid phone number with 11 digits (numbers only, can start with + sign)" required>
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
-
+      <input type="text" name="phone" placeholder="Phone number *" class="border rounded px-4 py-2 w-full" pattern="^\d{11}$" maxlength="11"inputmode="numeric"title="Enter a valid phone number with exactly 11 digits (numbers only)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
       <!-- Special Requests -->
       <div class="mt-6">
         <h3 class="font-medium mb-2">Special requests</h3>
-        <p class="text-sm text-gray-500 mb-2">This is a non-smoking property</p>
+        <p class="text-sm text-gray-500 mb-2"> </p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-blue-50 p-4 rounded">
           <div>
             <label class="block font-medium text-sm mb-1">Room type preference</label>
             <label class="flex items-center space-x-2 mb-1">
-              <input type="radio" name="smoking" value="Non-smoking" class="form-radio" required> <span>Non-smoking</span>
+              <input type="radio" name="smoking" value="Non-smoking" class="form-radio"> <span>Non-smoking</span>
             </label>
             <label class="flex items-center space-x-2">
               <input type="radio" name="smoking" value="Smoking" class="form-radio"> <span>Smoking</span>
             </label>
           </div>
           <div>
-            <label class="block font-medium text-sm mb-1">Bed preference</label>
+            <label class="block font-medium text-sm mb-1">Additional</label>
             <label class="flex items-center space-x-2 mb-1">
-              <input type="radio" name="bed" value="Large bed" class="form-radio" required> <span>I'd like a large bed</span>
+              <input type="radio" name="bed" value="Large bed" class="form-radio"> <span>I'd like a large bed</span>
             </label>
             <label class="flex items-center space-x-2">
               <input type="radio" name="bed" value="Twin beds" class="form-radio"> <span>I'd like twin beds</span>
@@ -86,6 +76,7 @@
       <input type="hidden" name="payment_method" id="hiddenPaymentMethod">
       <input type="hidden" name="total_amount" id="hiddenTotalAmount">
       <input type="hidden" name="card_amount_paid" id="hiddenCardAmountPaid">
+      <input type="hidden" name="numberOfRooms" id="numberOfRooms">
 
       <!-- Mode of Payment -->
       <div class="mt-8">
@@ -113,13 +104,8 @@
               <option value="Credit Card (Visa)">Credit Card </option>
               <option value="Debit Card (Mastercard)">Debit Card </option>
             </select>
-<<<<<<< HEAD
-            <input type="text" id="cardNumber" name="card_number" placeholder="Card Number (12 digits)" class="border rounded px-4 py-3 w-full mb-4" maxlength="14" pattern="\d{4}-\d{4}-\d{4}" title="Enter 12 digits (auto-formats as XXXX-XXXX-XXXX)" inputmode="numeric">
-            <input type="text" id="cardHolderName" name="card_holder" placeholder="Card Holder Name" class="border rounded px-4 py-3 w-full mb-4" pattern="[A-Za-z\s\-\.]+" title="Only letters, spaces, dot and hyphens allowed" >
-=======
             <input type="text" id="cardNumber" name="card_number" placeholder="Card Number (16 digits)" class="border rounded px-4 py-3 w-full mb-4" maxlength="19" pattern="\d{4}-\d{4}-\d{4}-\d{4}" title="Enter 16 digits (auto-formats as XXXX-XXXX-XXXX-XXXX)" inputmode="numeric">
             <input type="text" id="cardHolderName" name="card_holder" placeholder="Card Holder Name" class="border rounded px-4 py-3 w-full mb-4" pattern="^[A-Za-z\s\-\.]+$" title="Only letters, spaces, dot and hyphens allowed" autocomplete="off">
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
             <input type="text" id="expiryDate" name="expiry_date" placeholder="Card Expiry Date (MM/YY)" class="border rounded px-4 py-3 w-full mb-4" pattern="^(0[1-9]|1[0-2])\/\d{2}$" title="Format: MM/YY" >
             <input type="text" id="ccv" name="ccv" placeholder="CCV" class="border rounded px-4 py-3 w-full" maxlength="3" pattern="\d{3}" inputmode="numeric" title="3 digits only" >
             <div class="mt-4">
@@ -247,10 +233,6 @@ function setBankFieldsRequired(required) {
   });
 }
 
-<<<<<<< HEAD
-// Helper functions below are unchanged from your original, plus at the end we set card_amount_paid for backend.
-=======
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
 function getParam(name) {
   const url = new URL(window.location.href);
   return url.searchParams.get(name) || '';
@@ -314,8 +296,6 @@ const resortFeatures = {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
-<<<<<<< HEAD
-=======
   // --- Real-time block for first name and last name (letters only, no numbers) ---
   var firstName = document.querySelector('input[name="first_name"]');
   var lastName = document.querySelector('input[name="last_name"]');
@@ -330,7 +310,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
   // Get params from URL
   const checkin = getParam('checkin');
   const checkout = getParam('checkout');
@@ -340,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const roomPrice = getParam('roomPrice');
   const roomPriceNumber = parseInt(getParam('roomPriceNumber')) || 0;
   const location = getParam('location');
+  const numberOfRooms = getParam('numberOfRooms');
 
   // Update summary sidebar
   document.getElementById('summaryCheckin').innerHTML = `<strong>Check-in:</strong> ${formatDate(checkin)}`;
@@ -409,6 +389,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('hiddenRoomType').value = room;
   document.getElementById('hiddenGuests').value = summary;
   document.getElementById('hiddenTotalAmount').value = totalPrice;
+  document.getElementById('numberOfRooms').value = numberOfRooms;
 
   // Expiry date auto-format MM/YY
   const expiryInput = document.getElementById('expiryDate');
@@ -421,22 +402,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-<<<<<<< HEAD
-  // Card number: auto-format with dashes after every 4 digits (12 digits total)
-=======
   // Card number: auto-format with dashes after every 4 digits (16 digits total)
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
   const cardNumberInput = document.getElementById('cardNumber');
   if (cardNumberInput) {
     cardNumberInput.addEventListener('input', function(e) {
       // Remove all non-digit characters
-<<<<<<< HEAD
-      let digits = e.target.value.replace(/\D/g, '').slice(0, 12); // Strictly 12 digits
-     
-=======
       let digits = e.target.value.replace(/\D/g, '').slice(0, 16); // Strictly 16 digits
 
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
       // Add dashes after every 4 digits
       let formatted = '';
       for (let i = 0; i < digits.length; i++) {
@@ -445,27 +417,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         formatted += digits[i];
       }
-<<<<<<< HEAD
-     
-      // Update the field
-      e.target.value = formatted;
-     
-      // Validate (show error if incomplete)
-      if (digits.length === 12) {
-        e.target.setCustomValidity(''); // Valid
-      } else {
-        e.target.setCustomValidity('Please enter exactly 12 digits');
-      }
-    });
-   
-    // Validate on blur (when user leaves the field)
-    cardNumberInput.addEventListener('blur', function(e) {
-      const digits = e.target.value.replace(/\D/g, '');
-      if (digits.length !== 12) {
-        e.target.setCustomValidity('Please enter exactly 12 digits');
-      } else {
-        e.target.setCustomValidity(''); // Valid
-=======
 
       // Update the field
       e.target.value = formatted;
@@ -484,13 +435,10 @@ document.addEventListener('DOMContentLoaded', function() {
         e.target.setCustomValidity('Please enter exactly 16 digits');
       } else {
         e.target.setCustomValidity('');
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
       }
     });
   }
 
-<<<<<<< HEAD
-=======
   // Card Holder Name: block numbers in real time
   const cardHolderInput = document.getElementById('cardHolderName');
   if (cardHolderInput) {
@@ -500,7 +448,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
   // CCV: numeric only
   const ccvInput = document.getElementById('ccv');
   if (ccvInput) {
@@ -517,20 +464,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-<<<<<<< HEAD
-  document.getElementById('bookingForm').addEventListener('submit', function(e) {
-      const method = document.getElementById('paymentMethod').value;
-      const downpayment = Math.round(totalPrice * 0.15 * 100) / 100;
-      
-      // Set all required hidden fields
-      document.getElementById('hiddenTotalAmount').value = totalPrice.toFixed(2);
-      document.getElementById('hiddenCardAmountPaid').value = downpayment.toFixed(2);
-      
-      if (method === 'Bank Transfer') {
-          document.getElementById('hiddenCardAmountPaid').value = (downpayment + 50).toFixed(2);
-      }
-  });
-=======
   // Set card_amount_paid for backend if Bank Transfer is chosen:
   document.getElementById('bookingForm').addEventListener('submit', function(e) {
     const method = document.getElementById('paymentMethod').value;
@@ -542,7 +475,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
 });
 </script>
 </body>

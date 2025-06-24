@@ -73,6 +73,7 @@
       text-align: center;
     }
     .proof-form {
+      box-sizing: border-box;
       margin: 0 auto;
       max-width: 340px;
       padding: 22px 22px 10px 22px;
@@ -92,6 +93,7 @@
       font-size: 15px;
     }
     .proof-input {
+      box-sizing: border-box;
       font-size: 15px;
       padding: 8px 12px;
       border: 1.5px solid #e2e8f0;
@@ -147,27 +149,16 @@
     <h2>Booking Details</h2>
     <table>
       <tr><th>Hotel / Resort</th><td>{{ resort_name }}</td></tr>
-<<<<<<< HEAD
-      <tr><th>Check-in</th><td>{{ checkin_date[:16] }} at {{ checkin_time }}</td></tr>
-      <tr><th>Check-out</th><td>{{ checkout_date[:16] }} at {{ checkout_time }}</td></tr>
-=======
       <tr><th>Check-in</th><td>{{ checkin_date }} at {{ checkin_time }}</td></tr>
       <tr><th>Check-out</th><td>{{ checkout_date }} at {{ checkout_time }}</td></tr>
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
       <tr><th>Number of nights</th><td>{{ nights }}</td></tr>
       <tr><th>Room Type</th><td>{{ room_type }}</td></tr>
       <tr><th>Guests</th><td>{{ guests }}</td></tr>
       <tr><th>Special Requests</th><td>{% if special_requests %}{{ special_requests }}{% else %}<em>None</em>{% endif %}</td></tr>
       <tr><th>Mode of Payment</th><td>{{ payment_method }}</td></tr>
-<<<<<<< HEAD
-      <tr><th>Total Amount</th><td>₱ {{ "{:,.2f}".format(total_amount|float) }}</td></tr>
-      <tr><th>Down Payment</th><td>₱ {{ "{:,.2f}".format(downpayment|float) }}</td></tr>
-      <tr><th>Remaining Balance</th><td>₱ {{ "{:,.2f}".format(remaining_balance|float) }}</td></tr>
-=======
       <tr><th>Total Amount</th><td>₱ {{ '%.2f'|format(total_amount|float) }}</td></tr>
       <tr><th>Down Payment</th><td>₱ {{ '%.2f'|format(downpayment|float) }}</td></tr>
       <tr><th>Remaining Balance</th><td>₱ {{ '%.2f'|format(remaining_balance|float) }}</td></tr>
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
       {% if card_holder and card_last4 and card_type and card_reference %}
       <tr><th colspan="2" style="background:#e2e8f0;color:#34495e;">Card Payment Details (Proof)</th></tr>
       <tr><th>Cardholder Name</th><td>{{ card_holder }}</td></tr>
@@ -192,6 +183,8 @@
           <input type="hidden" name="resort_name" value="{{ resort_name }}">
           <input type="hidden" name="guest_first_name" value="{{ guest_first_name }}">
           <input type="hidden" name="guest_last_name" value="{{ guest_last_name }}">
+          <input type="hidden" name="email" value="{{ email }}">
+          <input type="hidden" name="phone" value="{{ phone }}">
           <input type="hidden" name="checkin_date" value="{{ checkin_date }}">
           <input type="hidden" name="checkin_time" value="{{ checkin_time }}">
           <input type="hidden" name="checkout_date" value="{{ checkout_date }}">
@@ -206,6 +199,7 @@
           <input type="hidden" name="remaining_balance" value="{{ remaining_balance }}">
           <input type="hidden" name="status" value="confirmed">
           <input type="hidden" name="qr_path" value="{{ qr_path }}">
+          <input type="hidden" name="numberOfRooms" value="{{ numberOfRooms }}">
           <div class="confirm-btn-section">
             <button type="submit" class="confirm-btn" id="confirmBtn" disabled>Confirm Booking</button>
           </div>
@@ -226,16 +220,14 @@
           <span class="proof-label">Last 4 digits of card number:</span>
           <input type="text" id="card_last4" name="card_last4" maxlength="4" pattern="\d{4}" class="proof-input" required>
           <span class="proof-label">Reference Number / Transaction ID:</span>
-          <input type="text" id="card_reference" name="card_reference" maxlength="32" class="proof-input" required>
-<<<<<<< HEAD
-     
-=======
+          <input type="text" id="card_reference" name="card_reference" maxlength="13" class="proof-input" required>
       
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
           <!-- Hidden fields for booking data -->
           <input type="hidden" name="resort_name" value="{{ resort_name }}">
           <input type="hidden" name="guest_first_name" value="{{ guest_first_name }}">
           <input type="hidden" name="guest_last_name" value="{{ guest_last_name }}">
+          <input type="hidden" name="email" value="{{ email }}">
+          <input type="hidden" name="phone" value="{{ phone }}">
           <input type="hidden" name="checkin_date" value="{{ checkin_date }}">
           <input type="hidden" name="checkin_time" value="{{ checkin_time }}">
           <input type="hidden" name="checkout_date" value="{{ checkout_date }}">
@@ -250,6 +242,7 @@
           <input type="hidden" name="remaining_balance" value="{{ remaining_balance }}">
           <input type="hidden" name="status" value="confirmed">
           <input type="hidden" name="qr_path" value="{{ qr_path }}">
+          <input type="hidden" name="numberOfRooms" value="{{ numberOfRooms }}">
           <div class="confirm-btn-section">
             <button type="submit" class="confirm-btn" id="confirmCardBtn">Confirm Booking</button>
           </div>
@@ -259,11 +252,8 @@
 
     <h2>Important Policies</h2>
     <div class="policy">
-      <strong>Cancellation Policy:</strong> Cancellations made more than 7 days before arrival will receive a full refund. Cancellations within 7 days of arrival may incur a fee or no refund.
-    </div>
-    <div class="policy">
-      <strong>Refund Policy:</strong> Refunds will be processed within 5-7 business days after cancellation confirmation.
-    </div>
+      <strong>Cancellation Policy:</strong> Please note that the down payment is strictly non-refundable, as it serves as a consideration fee for the time, effort, and opportunity cost involved in securing your reservation and holding the date exclusively for you.
+    </div> 
     <div class="policy">
       <strong>Check-in / Check-out:</strong> Check-in is at 2:00 PM and check-out is at 12:00 PM. Early check-in or late check-out is subject to availability.
     </div>
@@ -274,7 +264,7 @@
     <strong>PLEASE PRESENT THIS TO THE ADMIN DESK ONCE YOU'RE THERE!</strong>
 
     <h2>Need Help?</h2>
-    <p>If you have any questions or need to make changes to your booking, please contact us at <a href="mailto:support@yourresort.com">support@yourresort.com</a> or call +63 912 345 6789.</p>
+    <p>If you have any questions or need to make changes to your booking, please contact us at <a href="mailto:way2gobatangas@gmail.com">way2gobatangas@gmail.com</a> or call +63 963 649 1596.</p>
 
     <p>We look forward to welcoming you!</p>
     <p>Best regards,<br>The {{ resort_name }} Team</p>

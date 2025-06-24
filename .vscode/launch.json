@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Flask Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/app.py",  // or your main file
+            "args": [
+                // optional arguments
+            ],
+            "env": {
+                "FLASK_APP": "app.py",
+                "FLASK_ENV": "development"
+            },
+            "jinja": true,  // important for debugging inside Jinja templates
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

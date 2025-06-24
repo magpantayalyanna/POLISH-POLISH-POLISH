@@ -17,7 +17,7 @@
 
 
   <!-- Hero Section -->
-  <section class="relative bg-cover bg-center h-[50vh] flex items-center justify-center text-center text-white mb-12" style="background-image: url('static\images\2NDPAGEBG.jpg')">
+  <section class="relative bg-cover bg-center h-[50vh] flex items-center justify-center text-center text-white mb-12" style="background-image: url('static/images/2NDPAGEBG.jpg')">
     <div class="absolute inset-0 bg-black bg-opacity-50 z-0"></div>
     <div class="relative z-10 px-4">
       <h2 class="text-3xl font-[Playfair+Display] mb-3 text-[#f9f6f1] drop-shadow">Explore Our Premier Resorts</h2>
@@ -28,91 +28,26 @@
 
   <!-- Resorts Gallery -->
   <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto my-12 px-6">
-
-
-    <!-- AquaVibe Resort -->
-    <a href="/resort-details?resort=aquavibe-resort" class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full text-center hover:shadow-lg transition">
-      <img src="static\images\Resort 1.jpg" alt="AquaVibe Resort" class="w-full h-48 object-cover">
+    {% for resort in resorts %}
+    <a href="/resort-details?resort={{ resort.slug }}" class="bg-white rounded-xl shadow-md hover:shadow-lg transition">
+      <img src="{{ resort.image_url }}" alt="{{ resort.name }}" class="w-full h-48 object-cover">
       <div class="p-4">
-        <p class="text-lg font-semibold text-[#2c3e50]">AquaVibe Resort</p>
+        <p class="text-lg font-semibold text-[#2c3e50]">{{ resort.name }}</p>
+        {% if resort.is_pet_friendly %}
+          <div class="mt-2 flex items-center justify-center">
+            <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
+              <svg class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Pet Friendly
+            </span>
+          </div>
+        {% endif %}
+        <p class="text-sm text-gray-500 mt-2">{{ resort.description }}</p>
       </div>
     </a>
-
-
-    <!-- CrystalSplash Poolside Haven -->
-    <a href="/resort-details?resort=crystalsplash-poolside-haven" class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full text-center hover:shadow-lg transition">
-      <img src="static\images\Resort 2.jpg" alt="CrystalSplash Poolside Haven" class="w-full h-48 object-cover">
-      <div class="p-4">
-        <p class="text-lg font-semibold text-[#2c3e50]">CrystalSplash Poolside Haven</p>
-      </div>
-    </a>
-
-
-    <!-- Sunset Waters Pool Resort -->
-    <a href="/resort-details?resort=sunset-waters-pool-resort" class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full text-center hover:shadow-lg transition">
-      <img src="static\images\Resort 3.jpg" alt="Sunset Waters Pool Resort" class="w-full h-48 object-cover">
-      <div class="p-4">
-        <p class="text-lg font-semibold text-[#2c3e50]">Sunset Waters Pool Resort</p>
-      </div>
-    </a>
-
-
-    <!-- BlueWave Pool Resort (Pet Friendly) -->
-    <a href="/resort-details?resort=bluewave-pool-resort" class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full text-center hover:shadow-lg transition">
-      <img src="static\images\Resort 10.jpg" alt="BlueWave Pool Resort" class="w-full h-48 object-cover">
-      <div class="p-4 flex flex-col flex-grow">
-        <p class="text-lg font-semibold text-[#2c3e50]">BlueWave Pool Resort</p>
-        <div class="mt-2 flex items-center justify-center">
-          <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            Pet Friendly
-          </span>
-        </div>
-        <p class="text-sm text-gray-500 mt-2">We love pets! Please help us keep this a safe and happy place for all by being a mindful pet owner.</p>
-      </div>
-    </a>
-
-
-    <!-- Lagoon Cove Resort (Pet Friendly) -->
-    <a href="/resort-details?resort=lagoon-cove-resort" class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full text-center hover:shadow-lg transition">
-      <img src="static/images/Resort 4.jpg" alt="Lagoon Cove Resort" class="w-full h-48 object-cover">
-      <div class="p-4 flex flex-col flex-grow">
-        <p class="text-lg font-semibold text-[#2c3e50]">Lagoon Cove Resort</p>
-        <div class="mt-2 flex items-center justify-center">
-          <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            Pet Friendly
-          </span>
-        </div>
-        <p class="text-sm text-gray-500 mt-2">For the comfort of all guests, responsible pet ownership is appreciated.</p>
-      </div>
-    </a>
-
-
-    <!-- CoolSprings Private Resort (Pet Friendly) -->
-    <a href="/resort-details?resort=coolsprings-private-resort" class="bg-white rounded-xl shadow-md overflow-hidden flex flex-col h-full text-center hover:shadow-lg transition">
-      <img src="static\images\Resort 6.jpg" alt="CoolSprings Private Resort" class="w-full h-48 object-cover">
-      <div class="p-4 flex flex-col flex-grow">
-        <p class="text-lg font-semibold text-[#2c3e50]">CoolSprings Private Resort</p>
-        <div class="mt-2 flex items-center justify-center">
-          <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            Pet Friendly
-          </span>
-        </div>
-        <p class="text-sm text-gray-500 mt-2">Help us maintain a pet-friendly environment by being a responsible owner.</p>
-      </div>
-    </a>
-
-
+    {% endfor %}
   </section>
-
 
   <!-- Footer -->
   <footer class="bg-[#2c3e50] text-white text-center py-6 text-sm mt-12">

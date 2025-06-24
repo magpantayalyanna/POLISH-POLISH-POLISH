@@ -1,129 +1,411 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
-from datetime import datetime
-import sqlite3
+from collections import defaultdict
+from operator import and_
+from flask import Flask, abort, json, render_template, request, redirect, url_for, flash, jsonify, session
+from datetime import date, datetime, timedelta
+import click
 import os
+from flask.cli import with_appcontext
+from markupsafe import Markup
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from flask_mail import Mail, Message
+from models.extensions import db
+from models.models import Resort, Feedback, Room, AdminBooking
 
+# Initialize Flask app and mail
 app = Flask(__name__)
-app.secret_key = "your_secret_key"  # Needed for flash messages!
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///admin_bookings.db'
+app.secret_key = "your_secret_key"
+
+# Email configuration for booking notifications
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'way2gobatangas@gmail.com'
+app.config['MAIL_PASSWORD'] = 'cmpffgocffkmdfay'
+app.config['MAIL_DEFAULT_SENDER'] = 'way2gobatangas@gmail.com'
+mail = Mail(app)
+
+# Initialize database with the Flask app
+db.init_app(app)
 
 feedbacks = []
 
+# CLI command to initialize (reset and seed) the database
+@click.command("init-db")
+@with_appcontext
 def init_db():
-    # BOOKINGS DB
-    conn = sqlite3.connect('admin_bookings.db')
-    cursor = conn.cursor()
+    db.drop_all()
+    db.create_all()
+    
+    # Extended resort data with location, maps, and amenities
+    resorts_data = [
+        {
+            "slug": "bluewave-pool-resort",
+            "name": "BlueWave Pool Resort",
+            "image_url": "static/images/Resort 10.jpg",
+            "is_pet_friendly": True,
+            "description": "Enjoy a relaxing stay at BlueWave, featuring spacious pools and family-friendly amenities. As a pet-friendly resort, we encourage all guests to be responsible pet owners during their visit.",
+            "location": "Lipa, Batangas",
+            "google_maps_link": "https://www.google.com/maps?q=Lipa,+Batangas",
+            "amenities": ["Wave pool", "Cottages", "Grill area", "Kiddie pool"]
+        },
+        {
+            "slug": "aquavibe-resort",
+            "name": "AquaVibe Resort",
+            "image_url": "static/images/Resort 1.jpg",
+            "is_pet_friendly": False,
+            "description": "AquaVibe is the perfect getaway for groups and barkadas, with vibrant pools and party amenities.",
+            "location": "San Juan, Batangas",
+            "google_maps_link": "https://bit.ly/3HQMwoQ",
+            "amenities": ["Infinity pool", "Function hall", "Music lounge", "Picnic area"]
+        },
+        {
+            "slug": "crystalsplash-poolside-haven",
+            "name": "CrystalSplash Poolside Haven",
+            "image_url": "static/images/Resort 2.jpg",
+            "is_pet_friendly": False,
+            "description": "CrystalSplash offers elegant poolside relaxation, perfect for weekend family escapes.",
+            "location": "Nasugbu, Batangas",
+            "google_maps_link": "bit.ly/4eijVVG",
+            "amenities": ["Lap pool", "Gazebos", "Jacuzzi", "Private suites"]
+        },
+        {
+            "slug": "lagoon-cove-resort",
+            "name": "Lagoon Cove Resort",
+            "image_url": "static/images/Resort 4.jpg",
+            "is_pet_friendly": True,
+            "description": "A nature-inspired pool resort with a relaxing lagoon, perfect for unwinding, reunions, and quality time with your furry friends—just remember to care for them responsibly.",
+            "location": "Tanauan, Batangas",
+            "google_maps_link": "https://www.google.com/maps?q=Tanauan,+Batangas",
+            "amenities": ["Lagoon pool", "BBQ pit", "Wide lawn", "Clubhouse"]
+        },
+        {
+            "slug": "sunset-waters-pool-resort",
+            "name": "Sunset Waters Pool Resort",
+            "image_url": "static/images/Resort 3.jpg",
+            "is_pet_friendly": False,
+            "description": "Enjoy beautiful sunset views and a relaxing pool experience at Sunset Waters Pool Resort.",
+            "location": "Balayan, Batangas",
+            "google_maps_link": "https://www.google.com/maps?q=Balayan,+Batangas",
+            "amenities": ["Sunset deck", "Adult and kiddie pools", "Open cabanas", "Bar & grill"]
+        },
+        {
+            "slug": "coolsprings-private-resort",
+            "name": "CoolSprings Private Resort",
+            "image_url": "static/images/Resort 6.jpg",
+            "is_pet_friendly": True,
+            "description": "Experience exclusive privacy and cool spring water pools, ideal for private gatherings. Pets are welcome—please be a responsible pet owner and help us maintain a safe, clean environment for everyone.",
+            "location": "Sto. Tomas, Batangas",
+            "google_maps_link": "https://www.google.com/maps?q=Sto.+Tomas,+Batangas",
+            "amenities": ["Private pool villas", "Natural spring water", "Conference room", "Bonfire area"]
+        }
+    ]
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS admin_bookings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resort_name TEXT,
-            guest_first_name TEXT,
-            guest_last_name TEXT,
-            checkin_date TEXT,
-            checkin_time TEXT,
-            checkout_date TEXT,
-            checkout_time TEXT,
-            nights INTEGER,
-            room_type TEXT,
-            guests INTEGER,
-            special_requests TEXT,
-            payment_method TEXT,
-            total_amount REAL,
-            downpayment REAL,
-            remaining_balance REAL,
-            status TEXT,
-            qr_path TEXT,
-            reference_number TEXT,
-            bank_number_last4 TEXT,
-            card_holder_name TEXT,
-            bank_reference_number TEXT,
-            created_at TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    # Room data for each resort
+    rooms_data = {
+        "bluewave-pool-resort": [
+            {
+                "room_name": "Garden Room",
+                "price": 4000,
+                "capacity_min": 2,
+                "capacity_max": 3,
+                "description": "Cozy room with garden views, queen-size bed, and breakfast.",
+                "image_url": "static/images/Garden Type 1.jpg",
+                "amenities": ["Queen-size bed", "Garden view", "Complimentary breakfast"]
+            },
+            {
+                "room_name": "Beachfront Suite",
+                "price": 7000,
+                "capacity_min": 2,
+                "capacity_max": 6,
+                "description": "Suites directly facing the sea, king-size bed, balcony.",
+                "image_url": "static/images/Beach Front 1.jpg",
+                "amenities": ["King-size bed", "Balcony with sea view", "Direct beach access"]
+            }
+        ],
+        "aquavibe-resort": [
+            {
+                "room_name": "Mountain View Room",
+                "price": 5500,
+                "capacity_min": 2,
+                "capacity_max": 3,
+                "description": "Rooms overlooking lush mountains, twin beds.",
+                "image_url": "static/images/Garden Type 2.jpg",
+                "amenities": ["Twin beds", "Mountain view"]
+            },
+            {
+                "room_name": "Lagoon Suite",
+                "price": 8200,
+                "capacity_min": 2,
+                "capacity_max": 6,
+                "description": "Spacious suite with lagoon access, living room.",
+                "image_url": "static/images/Beach Front 2.jpg",
+                "amenities": ["Lagoon access", "Living room"]
+            }
+        ],
+        "crystalsplash-poolside-haven": [
+            {
+                "room_name": "Deluxe Room",
+                "price": 6000,
+                "capacity_min": 2,
+                "capacity_max": 3,
+                "description": "Modern room with pool access and breakfast.",
+                "image_url": "static/images/Garden Type 3.jpg",
+                "amenities": ["Pool access", "Complimentary breakfast"]
+            },
+            {
+                "room_name": "Infinity Suite",
+                "price": 10000,
+                "capacity_min": 2,
+                "capacity_max": 6,
+                "description": "Suite with infinity pool views, luxurious amenities.",
+                "image_url": "static/images/Beach Front 3.jpg",
+                "amenities": ["Infinity pool view", "Luxury amenities"]
+            }
+        ],
+        "lagoon-cove-resort": [
+            {
+                "room_name": "Superior Room",
+                "price": 5200,
+                "capacity_min": 2,
+                "capacity_max": 3,
+                "description": "Spacious room with pool or garden view, twin beds.",
+                "image_url": "static/images/Garden Type 4.jpg",
+                "amenities": ["Twin beds", "Pool/garden view"]
+            },
+            {
+                "room_name": "Family Suite",
+                "price": 8800,
+                "capacity_min": 4,
+                "capacity_max": 6,
+                "description": "Large suite for families, 2 bedrooms, living area.",
+                "image_url": "static/images/Beach Front 4.jpg",
+                "amenities": ["2 Bedrooms", "Living area"]
+            }
+        ],
+        "sunset-waters-pool-resort": [
+            {
+                "room_name": "Standard Room",
+                "price": 4800,
+                "capacity_min": 2,
+                "capacity_max": 3,
+                "description": "Comfortable room with twin beds, basic amenities.",
+                "image_url": "static/images/Garden Type 5.jpg",
+                "amenities": ["Twin beds", "Air conditioning"]
+            },
+            {
+                "room_name": "Deluxe Suite",
+                "price": 7200,
+                "capacity_min": 2,
+                "capacity_max": 6,
+                "description": "Spacious suite, sea view, king-sized bed.",
+                "image_url": "static/images/Beach Front 5.jpg",
+                "amenities": ["Sea view", "King-sized bed"]
+            }
+        ],
+        "coolsprings-private-resort": [
+            {
+                "room_name": "Sulu Terrace",
+                "price": 9000,
+                "capacity_min": 2,
+                "capacity_max": 3,
+                "description": "Rustic Filipino-inspired villa, garden view, queen-size bed.",
+                "image_url": "static/images/Garden Type 6.jpg",
+                "amenities": ["Garden view", "Queen-size bed"]
+            },
+            {
+                "room_name": "Narra Pool Villa",
+                "price": 18000,
+                "capacity_min": 2,
+                "capacity_max": 6,
+                "description": "Private villa with pool, luxurious amenities, forest view.",
+                "image_url": "static/images/Beach Front 6.png",
+                "amenities": ["Private pool", "Forest view"]
+            }
+        ]
+    }
 
-    # FEEDBACK DB
-    # Now create feedback.db if not exists and table
-    conn_fb = sqlite3.connect('feedback.db')
-    conn_fb.execute('''
-        CREATE TABLE IF NOT EXISTS feedback (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resort_name TEXT NOT NULL,
-            message TEXT NOT NULL
-        )
-    ''')
-    conn_fb.commit()
-    conn_fb.close()
+    # Insert resorts and their rooms into the database if not already present
+    for resort_data in resorts_data:
+        existing_resort = Resort.query.filter_by(slug=resort_data['slug']).first()
+        if not existing_resort:
+            new_resort = Resort(**resort_data)
+            db.session.add(new_resort)
+            db.session.flush()  # Flush to get the resort in the session
+            
+            # Insert rooms for this resort
+            resort_slug = resort_data['slug']
+            if resort_slug in rooms_data:
+                for room_data in rooms_data[resort_slug]:
+                    room_data['resort_slug'] = resort_slug
+                    new_room = Room(**room_data)
+                    db.session.add(new_room)
 
-def get_db_connection():
-    conn = sqlite3.connect('admin_bookings.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    db.session.commit()
+    click.echo("Database initialized successfully with resorts and rooms populated.")
 
-def get_feedback_db_connection():
-    conn = sqlite3.connect('feedback.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+app.cli.add_command(init_db)
 
+# Fetch all bookings, optionally filtered by resort name
 def fetch_bookings(resort_name=None):
-    conn = get_db_connection()
-    sql = "SELECT * FROM admin_bookings"
-    params = ()
+    query = db.session.query(
+        AdminBooking,
+        Resort.name.label('resort_name'),
+        Room.room_name.label('room_type')
+    ).join(Resort, AdminBooking.resort_id == Resort.id
+    ).join(Room, AdminBooking.room_id == Room.id)
+
     if resort_name:
-        sql += " WHERE resort_name = ?"
-        params = (resort_name,)
-    sql += " ORDER BY created_at DESC"
-    bookings = conn.execute(sql, params).fetchall()
-    conn.close()
+        query = query.filter(Resort.name == resort_name)
+
+    query = query.order_by(AdminBooking.created_at.desc())
+    results = query.all()
+
+    # Build list of dicts for template
+    bookings = []
+    for booking, resort_name, room_type in results:
+        bookings.append({
+            'id': booking.id,
+            'resort_name': resort_name,
+            'guest_first_name': booking.guest_first_name,
+            'guest_last_name': booking.guest_last_name,
+            'checkin_date': booking.checkin_date,
+            'checkout_time': '',  # if you plan to add time later
+            'checkout_date': booking.checkout_date,
+            'checkin_time': '',  # if you plan to add time later
+            'room_type': room_type,
+            'guests': booking.guests,
+            'payment_method': booking.payment_method,
+            'total_amount': booking.total_amount,
+            'downpayment': booking.downpayment,
+            'remaining_balance': booking.remaining_balance,
+            'reference_number': booking.reference_number,
+            'status': booking.status,
+            'bank_number_last4': booking.bank_number_last4,
+            'card_holder_name': booking.card_holder_name, 
+            'bank_reference_number': booking.bank_reference_number,
+            'guest_phone': booking.guest_phone,
+            'guest_email': booking.guest_email,
+        })
+
     return bookings
 
+# Get all feedbacks with associated resort name
 def get_all_feedbacks():
-    conn = get_feedback_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT resort_name, message FROM feedback ORDER BY id DESC")
-    rows = cur.fetchall()
-    conn.close()
-    return rows
+    feedbacks = db.session.query(
+        Feedback.message,
+        Resort.name.label('resort_name')
+    ).join(Resort, Feedback.resort_id == Resort.id).all()
 
-@app.route('/')
-def homepage():
-    return render_template('index.html')
+    # Convert to list of dicts for template rendering
+    feedback_list = [{'message': fb.message, 'resort_name': fb.resort_name} for fb in feedbacks]
+    return feedback_list
 
+# Homepage showing all resorts
+@app.route('/', endpoint='homepage')
+def dashboard():
+    resorts = Resort.query.all()
+    return render_template('index.html', resorts=resorts)
+
+# Save feedback from user
 @app.route('/submit_feedback', methods=['POST'])
 def submit_feedback():
-    resort = request.form.get('resort')
+    resort_id = request.form.get('resort')
     message = request.form.get('message')
-    if resort and message:
-        conn = get_feedback_db_connection()
-        cur = conn.cursor()
-        cur.execute("INSERT INTO feedback (resort_name, message) VALUES (?, ?)", (resort, message))
-        conn.commit()
-        conn.close()
+
+    if resort_id and message:
+        # Check if the resort exists
+        resort = Resort.query.get(resort_id)
+        if not resort:
+            flash("Selected resort does not exist.", "danger")
+            return redirect(url_for('homepage'))
+
+        # Save feedback
+        feedback = Feedback(resort_id=resort_id, message=message)
+        db.session.add(feedback)
+        db.session.commit()
+
         flash("Thank you for your feedback!", "success")
     else:
         flash("Please select a resort and enter your feedback.", "danger")
+
     return redirect(url_for('homepage'))
 
+# Explore/second page view
 @app.route('/2ndpage')
 def explore():
     return render_template('2ndpage.html')
 
+# Show all resorts (list view)
+@app.route('/resorts')
+def show_resorts():
+    resorts = Resort.query.all()  # fetch all resorts via ORM
+    return render_template('2ndpage.html', resorts=resorts)
+
+# Get all feedbacks for a specific resort
+def get_feedbacks_for_resort(resort_id):
+    feedbacks = db.session.query(
+        Feedback.message,
+        Resort.slug.label('resort_slug')
+    ).join(Resort, Feedback.resort_id == Resort.id).filter(Feedback.resort_id == resort_id).all()
+
+    return [{'message': fb.message, 'resort': fb.resort_slug} for fb in feedbacks]
+
+# Resort details page with rooms and feedbacks
 @app.route('/resort-details')
 def resort_details():
-    resort = request.args.get('resort')
-    # Get all feedbacks from db
-    all_feedbacks = get_all_feedbacks()
-    # Filter for the selected resort
-    feedbacks = []
-    for fb in all_feedbacks:
-        # fb['resort_name'] is the value saved in the db, e.g. "bluewave-pool-resort"
-        if fb['resort_name'] == resort:
-            feedbacks.append({'resort': fb['resort_name'], 'message': fb['message']})
-    return render_template('3rdpage.html', resort=resort, feedbacks=feedbacks)
+    resort_slug = request.args.get('resort')
+    
+    # Get resort information
+    resort = Resort.query.filter_by(slug=resort_slug).first()
+    
+    if not resort:
+        return render_template('3rdpage.html', resort=None, resort_data=None, rooms=[], feedbacks=[])
 
+    # Get rooms for this resort
+    rooms = Room.query.filter_by(resort_slug=resort_slug).all()
+
+    # Get feedbacks for this resort
+    feedbacks = get_feedbacks_for_resort(resort.id)
+
+    # Prepare resort data
+    resort_data = {
+        'slug': resort.slug,
+        'name': resort.name,
+        'description': resort.description,
+        'location': resort.location,
+        'google_maps_link': resort.google_maps_link,
+        'amenities': resort.amenities or [],
+        'image_url': resort.image_url,
+        'id': resort.id,
+    }
+
+    # Prepare rooms data
+    rooms_data = []
+    for room in rooms:
+        rooms_data.append({
+            'id': room.id,
+            'room_name': room.room_name,
+            'price': room.price,
+            'capacity_min': room.capacity_min,
+            'capacity_max': room.capacity_max,
+            'description': room.description,
+            'image_url': room.image_url,
+            'amenities': room.amenities or [],
+            'total_slots': room.total_slots
+        })
+
+    return render_template('3rdpage.html',
+                         resort=resort_slug,
+                         resort_data=resort_data,
+                         rooms=rooms_data,
+                         feedbacks=feedbacks)
+
+# Final booking form view (summary form)
 @app.route('/finalbookingform.html')
 def finalbookingform():
+    # Booking info from URL params
     resort = request.args.get('resort', '')
     checkin = request.args.get('checkin', '')
     checkout = request.args.get('checkout', '')
@@ -131,6 +413,8 @@ def finalbookingform():
     room = request.args.get('room', '')
     summary = request.args.get('summary', '')
     room_price_number = request.args.get('roomPriceNumber', '')
+    numberOfRooms = request.args.get('numberOfRooms', '1')
+
     return render_template(
         'finalbookingform.html',
         resort=resort,
@@ -139,13 +423,18 @@ def finalbookingform():
         location=location,
         room=room,
         summary=summary,
-        roomPriceNumber=room_price_number
+        roomPriceNumber=room_price_number,
+        numberOfRooms=numberOfRooms,
     )
 
+# Email template preview after booking
 @app.route('/emailtemplate.html', methods=['POST'])
 def emailtemplate():
+    # Collect booking details from form
     guest_first_name = request.form.get('first_name', '')
     guest_last_name = request.form.get('last_name', '')
+    email = request.form.get('email', '')
+    phone = request.form.get('phone', '')
     smoking = request.form.get('smoking', '')
     bed = request.form.get('bed', '')
     resort_name = request.form.get('resort_name', '')
@@ -154,6 +443,7 @@ def emailtemplate():
     nights = request.form.get('nights', '')
     room_type = request.form.get('room_type', '')
     guests = request.form.get('guests', '')
+    numberOfRooms = request.form.get('numberOfRooms', '1')
     special_requests = request.form.get('special_requests')
     if not special_requests:
         special_requests = f"Smoking: {smoking or 'None'}, Bed: {bed or 'None'}"
@@ -163,11 +453,7 @@ def emailtemplate():
         total_amount = float(total_amount)
     except Exception:
         total_amount = 0.0
-<<<<<<< HEAD
     downpayment = round(total_amount * 0.15, 2)
-=======
-    downpayment = round(total_amount * 0.10, 2)
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
     remaining_balance = round(total_amount - downpayment, 2)
     checkin_time = request.form.get('checkin_time', "2:00 PM")
     checkout_time = request.form.get('checkout_time', "12:00 PM")
@@ -210,123 +496,522 @@ def emailtemplate():
         card_type=card_type,
         card_last4=card_last4,
         card_reference=card_reference,
-        card_amount_paid=card_amount_paid
+        card_amount_paid=card_amount_paid,
+        email=email,
+        phone=phone,
+        numberOfRooms=numberOfRooms
     )
 
+# Admin dashboard for all resorts
 @app.route('/head_dashboard')
 def head_dashboard():
+    # Get all resorts and their rooms
+    resort_rooms = {}
+    
+    for key, name in RESORT_MAPPING.items():
+        resort = Resort.query.filter_by(name=name).first()
+        if resort:
+            rooms = Room.query.filter_by(resort_slug=resort.slug).all()
+            resort_rooms[key] = rooms
+        else:
+            resort_rooms[key] = []
     bookings = fetch_bookings()
-    return render_template('head_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+    return render_template('head_dashboard.html', 
+                         resort_rooms=resort_rooms,
+                         current_year=datetime.now().year,
+                         bookings=bookings) 
 
-@app.route('/aquavibe_dashboard.html')
-def aquavibe_dashboard():
-    bookings = fetch_bookings("AquaVibe Resort")
-    bookings = [dict(row) for row in bookings]
-    return render_template('aquavibe_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+# API to update total slots for a room (e.g. admin action)
+@app.route('/update_room_slots', methods=['POST'])
+def update_room_slots():
+    try:
+        data = request.get_json()
+        room_id = data.get('room_id')
+        change = data.get('change', 0)
+        
+        room = Room.query.get(room_id)
+        if not room:
+            return jsonify({'success': False, 'error': 'Room not found'}), 404
 
-@app.route('/bluewave_dashboard.html')
-def bluewave_dashboard():
-    bookings = fetch_bookings("BlueWave Pool Resort")
-    return render_template('bluewave_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+        new_total = room.total_slots + change
+        if new_total < 0:
+            return jsonify({'success': False, 'error': 'Cannot have negative slots'}), 400
 
-@app.route('/coolsprings_dashboard.html')
-def coolsprings_dashboard():
-    bookings = fetch_bookings("CoolSprings Private Resort")
-    return render_template('coolsprings_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+        # Prevent reducing slots below number of confirmed bookings
+        if change < 0:
+            today = date.today()
+            confirmed_bookings = AdminBooking.query.filter(
+                AdminBooking.room_id == room.id,
+                AdminBooking.status == 'confirmed',
+                AdminBooking.checkout_date >= str(today)
+            ).all()
 
-@app.route('/crystalsplash_dashboard.html')
-def crystalsplash_dashboard():
-    bookings = fetch_bookings("CrystalSplash Poolside Haven")
-    return render_template('crystalsplash_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+            if len(confirmed_bookings) > new_total:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Cannot reduce slots. There are {len(confirmed_bookings)} active bookings.'
+                }), 400
 
-@app.route('/lagoon_dashboard.html')
-def lagoon_dashboard():
-    bookings = fetch_bookings("Lagoon Cove Resort")
-    return render_template('lagoon_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+        room.total_slots = new_total
+        db.session.commit()
 
-@app.route('/sunset_dashboard.html')
-def sunset_dashboard():
-    bookings = fetch_bookings("Sunset Waters Pool Resort")
-    return render_template('sunset_dashboard.html', bookings=bookings, current_year=datetime.now().year)
+        return jsonify({
+            'success': True, 
+            'new_total': room.total_slots,
+            'room_id': room.id
+        })
 
-@app.route('/logout')
-def logout():
-    return redirect(url_for('head_dashboard')) 
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
+# Prepares bookings as calendar events for display (with color coding)
+def prepare_calendar_events(bookings):
+    """Prepare calendar events with color coding and extended details for tooltip."""
+    events = []
+    for booking in bookings:
+        status = booking.get('status', '').lower()
+
+        # Color coding based on status
+        if status == 'confirmed':
+            color = "#38a169"
+        elif status == 'pending':
+            color = "#ecc94b"
+        else:
+            color = "#e53e3e"
+
+        print(booking)
+        # Prepare event object
+        events.append({
+            "title": f"{booking['guest_first_name']} {booking['guest_last_name']} ({booking['status']})",
+            "start": booking['checkin_date'],
+            "end": booking['checkout_date'],
+            "color": color,
+            "extendedProps": {
+                "guest_name": f"{booking['guest_first_name']} {booking['guest_last_name']}",
+                "guest_email": booking.get('guest_email'),
+                "guest_phone": booking.get('guest_phone'),
+                "details":booking.get('guests'),
+                "room_type": booking.get('room_type'),
+                "payment_method": booking.get('payment_method'),
+                "total_amount": booking.get('total_amount'),
+                "special_requests": booking.get('special_requests'),
+                "reference_number": booking.get('reference_number'),
+            }
+        })
+    return events
+
+# Resort key mapping for dashboards
+RESORT_MAPPING = {
+    'bluewave': 'BlueWave Pool Resort',
+    'coolsprings': 'CoolSprings Private Resort',
+    'crystalsplash': 'CrystalSplash Poolside Haven',
+    'lagoon': 'Lagoon Cove Resort',
+    'sunset': 'Sunset Waters Pool Resort',
+    'aquavibe': 'AquaVibe Resort'
+}
+
+# Resort dashboard for a specific resort (shows bookings, stats, calendar)
+@app.route('/<resort_key>_dashboard.html')
+def resort_dashboard(resort_key):
+    # Exclude head_dashboard
+    if resort_key == 'head':
+        abort(404)
+    
+    # Get the full resort name from the mapping
+    resort_name = RESORT_MAPPING.get(resort_key)
+    
+    if not resort_name:
+        abort(404)  # Resort not found
+    
+    # Get date from query parameter if provided
+    selected_date = request.args.get('date', None)
+    if selected_date:
+        try:
+            selected_date = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        except:
+            selected_date = date.today()
+    else:
+        selected_date = date.today()
+    
+    bookings = fetch_bookings(resort_name)
+    events = prepare_calendar_events(bookings)
+    room_availability = calculate_room_availability(resort_name, selected_date)
+    return render_template('resort_dashboard.html', 
+                         bookings=bookings,
+                         resort_name=resort_name,
+                         calendar_events=json.dumps(events),
+                         room_availability=room_availability,
+                         selected_date=selected_date.strftime('%Y-%m-%d'),
+                         current_year=datetime.now().year)
+
+# Calculate available/occupied slots for each room in a resort for a given date
+def calculate_room_availability(resort_name, target_date=None):
+    if target_date is None:
+        target_date = date.today()
+
+    # Get the resort slug from the resort name
+    resort = Resort.query.filter_by(name=resort_name).first()
+    if not resort:
+        return {}
+
+    # Get all rooms for this resort
+    rooms = Room.query.filter_by(resort_slug=resort.slug).all()
+
+    # Map room_id to room_name and store room info
+    room_info = {}
+    room_id_to_name = {}
+    for room in rooms:
+        room_info[room.room_name] = {
+            'room_id': room.id,
+            'total_slots': room.total_slots,
+            'price': room.price,
+            'capacity': f"{room.capacity_min}-{room.capacity_max}",
+            'is_booking': room.is_booking
+        }
+        room_id_to_name[room.id] = room.room_name
+
+    room_ids = [room.id for room in rooms]
+
+    # Get confirmed bookings for the target date and resort
+    confirmed_bookings = AdminBooking.query.filter(
+        AdminBooking.room_id.in_(room_ids),
+        AdminBooking.status == 'confirmed',
+        AdminBooking.checkin_date <= target_date.strftime('%Y-%m-%d'),
+        AdminBooking.checkout_date > target_date.strftime('%Y-%m-%d')
+    ).all()
+
+    # Count occupied slots per room_id (accounting for num_rooms booked)
+    room_occupied = defaultdict(int)
+    for booking in confirmed_bookings:
+        room_occupied[booking.room_id] += booking.num_rooms
+
+    # Calculate availability per room_name
+    room_availability = {}
+    for room_name, info in room_info.items():
+        occupied = room_occupied.get(info['room_id'], 0)
+        available = info['total_slots'] - occupied
+
+        room_availability[room_name] = {
+            'total': info['total_slots'],
+            'occupied': occupied,
+            'available': available,
+            'price': info['price'],
+            'capacity': info['capacity'],
+            'is_booking': info['is_booking'],
+            'occupancy_rate': round((occupied / info['total_slots'] * 100), 1) if info['total_slots'] > 0 else 0
+        }
+
+    print(f"Room availability for {resort_name} on {target_date}: {room_availability}")
+    return room_availability
+
+# Feedback management dashboard
 @app.route('/feedback_dashboard')
 def feedbacks_dashboard():
     feedbacks = get_all_feedbacks()
     return render_template('feedback_dashboard.html', feedbacks=feedbacks)
 
+# Save a new booking to the database from booking form
 @app.route('/confirm-booking', methods=['POST'])
 def confirm_booking():
-    resort_name = request.form['resort_name']
-    guest_first_name = request.form['guest_first_name']
-    guest_last_name = request.form['guest_last_name']
-    checkin_date = request.form['checkin_date']
-    checkin_time = request.form['checkin_time']
-    checkout_date = request.form['checkout_date']
-    checkout_time = request.form['checkout_time']
-    nights = int(request.form['nights'])
+    
+    # Get resort by name (or use slug if better)
+    resort = Resort.query.filter_by(name=request.form['resort_name']).first()
+    if not resort:
+        flash('Selected resort not found.', 'danger')
+        return redirect(url_for('homepage'))
+    
+    resort_id = resort.id
+
+    # Get room by name/type and resort_id
     room_type = request.form['room_type']
+    room = Room.query.filter_by(room_name=room_type, resort_slug=resort.slug).first()
+    if not room:
+        flash('Selected room type not found.', 'danger')
+        return redirect(url_for('homepage'))
+
+    room_id = room.id
+
+    # Booking details
+    checkin_date = datetime.strptime(request.form['checkin_date'], '%Y-%m-%d').date()
+    checkout_date = datetime.strptime(request.form['checkout_date'], '%Y-%m-%d').date()
+    nights = int(request.form['nights'])
     guests = request.form['guests']
     special_requests = request.form['special_requests']
     payment_method = request.form['payment_method']
     total_amount = float(request.form['total_amount'])
     downpayment = round(total_amount * 0.15, 2)
     remaining_balance = round(total_amount - downpayment, 2)
-    status = request.form['status']
+    status = 'pending'
     qr_path = request.form['qr_path']
     reference_number = request.form.get('reference_number')
-    created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    created_at = datetime.now()
 
-    # Bank/Card info
     bank_number_last4 = request.form.get('card_last4', '')
     card_holder_name = request.form.get('card_holder', '')
     bank_reference_number = request.form.get('card_reference', '')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        '''INSERT INTO admin_bookings (
-            resort_name, guest_first_name, guest_last_name, checkin_date, checkin_time,
-            checkout_date, checkout_time, nights, room_type, guests, special_requests,
-            payment_method, total_amount, downpayment, remaining_balance, status, qr_path, reference_number,
-            bank_number_last4, card_holder_name, bank_reference_number, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (
-            resort_name, guest_first_name, guest_last_name, checkin_date, checkin_time,
-            checkout_date, checkout_time, nights, room_type, guests, special_requests,
-            payment_method, total_amount, downpayment, remaining_balance, status, qr_path, reference_number,
-            bank_number_last4, card_holder_name, bank_reference_number, created_at
-        )
+    guest_first_name = request.form.get('guest_first_name', '')
+    guest_last_name = request.form.get('guest_last_name', '')
+    guest_email = request.form.get('email', '')
+    guest_phone = request.form.get('phone', '')
+    num_rooms = request.form.get('numberOfRooms', 1)
+
+    # Create booking object and save to db
+    booking = AdminBooking(
+        resort_id=resort_id,
+        room_id=room_id,
+        checkin_date=checkin_date,
+        checkout_date=checkout_date,
+        nights=nights,
+        guests=guests,
+        special_requests=special_requests,
+        payment_method=payment_method,
+        total_amount=total_amount,
+        downpayment=downpayment,
+        remaining_balance=remaining_balance,
+        status=status,
+        qr_path=qr_path,
+        reference_number=reference_number,
+        bank_number_last4=bank_number_last4,
+        card_holder_name=card_holder_name,
+        bank_reference_number=bank_reference_number,
+        created_at=created_at,
+        guest_first_name=guest_first_name,
+        guest_last_name=guest_last_name,
+        guest_email=guest_email,
+        guest_phone=guest_phone,
+        num_rooms=num_rooms
     )
-    conn.commit()
-    conn.close()
+
+    db.session.add(booking)
+    db.session.commit()
+
     flash('Booking confirmed and saved!', 'success')
     return redirect(url_for('homepage'))
 
+# Update the status of a booking (admin action)
 @app.route('/update_status/<int:booking_id>', methods=['POST'])
 def update_status(booking_id):
     new_status = request.form.get('status')
+
     if new_status:
-        conn = get_db_connection()
-        conn.execute(
-            'UPDATE admin_bookings SET status = ? WHERE id = ?',
-            (new_status, booking_id)
-        )
-        conn.commit()
-        conn.close()
-        flash('Booking status updated!', 'success')
+        # Fetch booking by id
+        booking = AdminBooking.query.get(booking_id)
+        if booking:
+            booking.status = new_status
+            db.session.commit()
+            flash('Booking status updated!', 'success')
+        else:
+            flash('Booking not found.', 'danger')
     else:
         flash('No status provided.', 'danger')
+
     return redirect(url_for('head_dashboard'))
 
-<<<<<<< HEAD
+# API: Get all room data for frontend (AJAX)
+@app.route('/get-room-data')
+def get_room_data():
+    rooms = Room.query.all()
 
+    room_data = {}
+    for room in rooms:
+        room_data[room.id] = {
+            'room_name': room.room_name,
+            'price': room.price,
+            'capacity_min': room.capacity_min,
+            'capacity_max': room.capacity_max,
+            'description': room.description,
+            'image_url': room.image_url,
+            'total_slots': room.total_slots,
+            'resort_slug': room.resort_slug
+        }
 
-=======
->>>>>>> 2bdebb2e929241be9a0f15ab65b6ae95ff585d32
+    return jsonify(room_data)
+
+# API: Get booked dates for a specific room (for calendar disable in frontend)
+@app.route('/get-booked-dates')
+def get_booked_dates():
+    room_id = request.args.get('room_id')
+
+    if not room_id:
+        return jsonify({'error': 'Missing room_id'}), 400
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({'error': 'Room not found'}), 404
+
+    total_slots = room.total_slots
+
+    # Fetch bookings only for this room
+    bookings = AdminBooking.query.filter(
+            AdminBooking.room_id == room_id,
+            AdminBooking.status == 'confirmed'
+        ).all()
+
+    bookings_per_day = {}
+    disabled = []
+
+    for booking in bookings:
+        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d')
+        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d')
+        num_rooms = getattr(booking, 'num_rooms', 1) or 1  # fallback if null/None
+
+        while start < end:
+            date_str = start.strftime('%Y-%m-%d')
+            bookings_per_day[date_str] = bookings_per_day.get(date_str, 0) + num_rooms
+            if bookings_per_day[date_str] >= total_slots:
+                if date_str not in disabled:
+                    disabled.append(date_str)
+            start += timedelta(days=1)
+
+    return jsonify({
+        'disabled': disabled,
+        'bookings_per_day': bookings_per_day,
+        'total_slots': total_slots
+    })
+
+from datetime import datetime, date, timedelta
+
+# API: Get available slots per day for a specific room (for calendar/booking frontend)
+@app.route('/get-room-slots')
+def get_room_slots():
+    room_id = request.args.get('room_id')
+    if not room_id:
+        return jsonify({'error': 'Missing room_id'}), 400
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({'error': 'Room not found'}), 404
+
+    total_slots = room.total_slots
+    bookings = AdminBooking.query.filter(
+        AdminBooking.room_id == room_id,
+        AdminBooking.status == 'confirmed'
+    ).all()
+
+    bookings_per_day = {}
+
+    # Count bookings per day based on actual booking dates
+    for booking in bookings:
+        start = datetime.strptime(booking.checkin_date, '%Y-%m-%d').date()
+        end = datetime.strptime(booking.checkout_date, '%Y-%m-%d').date()
+        num_rooms = booking.num_rooms or 1
+
+        while start < end:
+            date_str = start.strftime('%Y-%m-%d')
+            bookings_per_day[date_str] = bookings_per_day.get(date_str, 0) + num_rooms
+            start += timedelta(days=1)
+
+    # Now compute available slots per day for the next 1 year
+    available_slots_per_day = {}
+    today = date.today()
+    one_year_later = today + timedelta(days=365)
+    current_day = today
+
+    while current_day <= one_year_later:
+        date_str = current_day.strftime('%Y-%m-%d')
+        booked = bookings_per_day.get(date_str, 0)
+        remaining = max(0, total_slots - booked)
+        available_slots_per_day[date_str] = remaining
+        current_day += timedelta(days=1)
+
+    return jsonify({
+        'totalSlots': total_slots,
+        'bookingsPerDay': bookings_per_day,
+        'availableSlotsPerDay': available_slots_per_day
+    })
+
+# API: Set a room as being booked or available (locking mechanism for booking process)
+@app.route('/set_room_booking_status', methods=['POST'])
+def set_room_booking_status_api():
+    data = request.get_json()
+
+    room_id = data.get('room_id')
+    status = data.get('status')
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({'success': False, 'message': 'Room not found.'}), 404
+
+    room.is_booking = 1 if status else 0
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': f'Room {room_id} booking status set to {status}.'})
+
+# API: Check if a room is currently being booked (for disabling button in frontend)
+@app.route('/check_room_booking_status', methods=['GET'])
+def check_room_booking_status():
+    room_id = request.args.get('room_id')
+    if not room_id:
+        return jsonify({'success': False, 'message': 'Missing room_id'}), 400
+
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({'success': False, 'message': 'Room not found'}), 404
+
+    return jsonify({'success': True, 'is_booking': room.is_booking})
+
+# Update booking status for a resort, send email if confirmed
+@app.route('/update_resort_status/<int:booking_id>', methods=['POST'])
+def update_resort_booking(booking_id):
+    booking_id = booking_id
+    new_status = request.form.get('status')
+    booking = AdminBooking.query.get(booking_id)
+    if not booking:
+        flash('Booking not found.', 'danger')
+        return redirect(request.referrer or url_for('head_dashboard'))
+    
+    # Update booking fields from form (other fields could be updated as needed)
+    booking.status = new_status
+    room = Room.query.filter_by(id=booking.room_id).first()
+
+    db.session.commit()
+
+    # Only send email if status changed to Confirmed
+    if new_status.lower() == 'confirmed':
+        try:
+            msg = Message(
+                subject="Your Booking is Confirmed!",
+                recipients=[booking.guest_email]
+            )
+            msg.html = render_template('mailmessagetemplate.html',
+                guest_first_name=booking.guest_first_name,
+                guest_last_name=booking.guest_last_name,
+                resort_name=booking.resort.name if booking.resort else '',
+                room_type=room.room_name if room else '',
+                guests=booking.guests,
+                checkin_date=booking.checkin_date,
+                checkin_time=getattr(booking, 'checkin_time', '2:00 PM'),
+                checkout_date=booking.checkout_date,
+                checkout_time=getattr(booking, 'checkout_time', '12:00 PM'),
+                special_requests=getattr(booking, 'special_requests', 'None'),
+                total_amount=booking.total_amount,
+                downpayment=booking.downpayment,
+                remaining_balance=booking.remaining_balance,
+                payment_method=booking.payment_method,
+                card_holder=getattr(booking, 'card_holder_name', ''),
+                card_type=getattr(booking, 'card_type', ''),
+                card_last4=getattr(booking, 'bank_number_last4', ''),
+                card_reference=getattr(booking, 'bank_reference_number', '')
+            )
+            mail.send(msg)
+            flash('Confirmation email sent to guest!', 'success')
+        except Exception as e:
+            flash(f'Could not send confirmation email: {e}', 'danger')
+
+    # Redirect back to the resort dashboard
+    if booking.resort:
+        resort_key = None
+        for key, name in RESORT_MAPPING.items():
+            if name == booking.resort.name:
+                resort_key = key
+                break
+        if resort_key:
+            return redirect(url_for('resort_dashboard', resort_key=resort_key))
+    return redirect(url_for('head_dashboard'))
+
+# Entrypoint: Run the app and initialize DB if run as script
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    app.run(port=5001, debug=True)

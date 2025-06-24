@@ -7,6 +7,116 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        .resort-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        .room-slots-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--lightgray);
+        }
+
+        .room-slots-section h4 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+
+        .room-slot-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .room-info {
+            flex: 1;
+        }
+
+        .room-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .room-capacity {
+            font-size: 14px;
+            color: #666;
+            margin-left: 10px;
+        }
+
+        .slot-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 0 20px;
+        }
+
+        .btn-decrease, .btn-increase {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-decrease:hover, .btn-increase:hover {
+            background: var(--primary);
+            transform: scale(1.1);
+        }
+
+        .btn-decrease:disabled, .btn-increase:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .slot-count {
+            font-size: 20px;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .room-status {
+            margin-left: 20px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.active {
+            background: #38a169;
+            color: white;
+        }
+
+        .status-badge.inactive {
+            background: #e53e3e;
+            color: white;
+        }
+
+        .no-rooms {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
         :root {
             --primary: #003f5c;
             --accent: #2f4b7c;
@@ -393,48 +503,53 @@
                     </div>
                 </div>
                 <div class="quick-links">
-                    <a href="{{ url_for('aquavibe_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>AquaVibe Resort</h3>
-                            <p>View bookings and manage AquaVibe Resort</p>
+                    {% set resorts = [
+                        {'key': 'aquavibe', 'name': 'AquaVibe Resort', 'icon': 'fa-water'},
+                        {'key': 'bluewave', 'name': 'BlueWave Resort', 'icon': 'fa-water'},
+                        {'key': 'coolsprings', 'name': 'CoolSprings Resort', 'icon': 'fa-water'},
+                        {'key': 'crystalsplash', 'name': 'CrystalSplash Resort', 'icon': 'fa-water'},
+                        {'key': 'lagoon', 'name': 'Lagoon Cove Resort', 'icon': 'fa-water'},
+                        {'key': 'sunset', 'name': 'Sunset Waters Resort', 'icon': 'fa-sun'}
+                    ] %}
+                    
+                    {% for resort in resorts %}
+                    <div class="resort-card">
+                        <a href="{{ url_for('resort_dashboard', resort_key=resort.key) }}" class="quick-link">
+                            <i class="fas {{ resort.icon }}"></i>
+                            <div class="quick-link-content">
+                                <h3>{{ resort.name }}</h3>
+                                <p>View bookings and manage {{ resort.name }}</p>
+                            </div>
+                        </a>
+                        
+                        <!-- Room Slots Management -->
+                        <div class="room-slots-section">
+                            <h4>Room Inventory</h4>
+                            {% if resort_rooms[resort.key] %}
+                                {% for room in resort_rooms[resort.key] %}
+                                <div class="room-slot-control">
+                                    <div class="room-info">
+                                        <span class="room-name">{{ room.room_name }}</span>
+                                        <span class="room-capacity">({{ room.capacity_min }}-{{ room.capacity_max }} pax)</span>
+                                    </div>
+                                    <div class="slot-controls">
+                                        <button class="btn-decrease" onclick="updateSlots('{{ resort.key }}', '{{ room.id }}', -1)">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <span class="slot-count" id="slot-{{ room.id }}">{{ room.total_slots }}</span>
+                                        <button class="btn-increase" onclick="updateSlots('{{ resort.key }}', '{{ room.id }}', 1)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <p class="no-rooms">No rooms configured</p>
+                            {% endif %}
                         </div>
-                    </a>
-                    <a href="{{ url_for('bluewave_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>BlueWave Resort</h3>
-                            <p>View bookings and manage BlueWave Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('coolsprings_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>CoolSprings Resort</h3>
-                            <p>View bookings and manage CoolSprings Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('crystalsplash_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>CrystalSplash Resort</h3>
-                            <p>View bookings and manage CrystalSplash Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('lagoon_dashboard') }}" class="quick-link">
-                        <i class="fas fa-water"></i>
-                        <div class="quick-link-content">
-                            <h3>Lagoon Cove Resort</h3>
-                            <p>View bookings and manage Lagoon Cove Resort</p>
-                        </div>
-                    </a>
-                    <a href="{{ url_for('sunset_dashboard') }}" class="quick-link">
-                        <i class="fas fa-sun"></i>
-                        <div class="quick-link-content">
-                            <h3>Sunset Waters Resort</h3>
-                            <p>View bookings and manage Sunset Waters Resort</p>
-                        </div>
-                    </a>
+                    </div>
+                    {% endfor %}
+                    
                     <a href="{{ url_for('feedbacks_dashboard') }}" class="quick-link feedback-link-center">
                         <i class="fas fa-comments"></i>
                         <div class="quick-link-content">
@@ -529,7 +644,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <form method="POST" action="{{ url_for('update_status', booking_id=booking['id']) }}">
+                                <form method="POST" action="{{ url_for('update_resort_booking', booking_id=booking['id']) }}">
                                     <select name="status" 
                                         class="status-select {{ booking['status']|lower }}" 
                                         onchange="this.className='status-select '+this.value.toLowerCase(); this.form.submit();">
@@ -697,6 +812,96 @@
             // You would need to implement this based on your actual data
             console.log('Updating stats counters...');
         }
+        function updateSlots(resortKey, roomId, change) {
+            // Get current value
+            const slotElement = document.getElementById(`slot-${roomId}`);
+            const currentSlots = parseInt(slotElement.textContent);
+            
+            // Disable buttons during update
+            const buttons = slotElement.parentElement.querySelectorAll('button');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            // Send update request
+            fetch('/update_room_slots', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    room_id: roomId,
+                    change: change
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the display
+                    slotElement.textContent = data.new_total;
+                    
+                    // Show success message
+                    showNotification('Room slots updated successfully', 'success');
+                    
+                    // Check if decrease button should be disabled
+                    if (data.new_total === 0) {
+                        slotElement.previousElementSibling.disabled = true;
+                    }
+                } else {
+                    // Show error message
+                    showNotification(data.error || 'Failed to update slots', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('An error occurred while updating slots', 'error');
+            })
+            .finally(() => {
+                // Re-enable buttons
+                buttons.forEach(btn => btn.disabled = false);
+            });
+        }
+
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            // Style the notification
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                ${type === 'success' ? 'background: #38a169;' : 'background: #e53e3e;'}
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
