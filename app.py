@@ -830,7 +830,10 @@ def get_booked_dates():
     total_slots = room.total_slots
 
     # Fetch bookings only for this room
-    bookings = AdminBooking.query.filter_by(room_id=room_id).all()
+    bookings = AdminBooking.query.filter(
+            AdminBooking.room_id == room_id,
+            AdminBooking.status == 'confirmed'
+        ).all()
 
     bookings_per_day = {}
     disabled = []
@@ -867,7 +870,10 @@ def get_room_slots():
         return jsonify({'error': 'Room not found'}), 404
 
     total_slots = room.total_slots
-    bookings = AdminBooking.query.filter_by(room_id=room_id).all()
+    bookings = AdminBooking.query.filter(
+        AdminBooking.room_id == room_id,
+        AdminBooking.status == 'confirmed'
+    ).all()
 
     bookings_per_day = {}
 
